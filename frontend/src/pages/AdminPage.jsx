@@ -328,6 +328,13 @@ function AdminPage() {
             <div className="admin-auth-grid" />
           </div>
           <form className="admin-auth-form" onSubmit={handleLogin}>
+            <div className="admin-auth-brand">
+              <div className="admin-auth-logo">CZM</div>
+              <div>
+                <p className="admin-auth-company">CZARK MAK CORPORATION</p>
+                <h2 className="admin-auth-heading">Admin Portal</h2>
+              </div>
+            </div>
             <label className="admin-label">
               <span>Email</span>
               <input
@@ -415,17 +422,27 @@ function AdminPage() {
                 </select>
               </div>
               <ul className="admin-list">
-                {applicants.map((item) => (
+                {loadingApplicants ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <li key={`skel-${i}`}>
+                      <div className="admin-list-skeleton" style={{ animationDelay: `${i * 0.07}s` }}>
+                        <div className="admin-list-skel-line" style={{ width: '65%' }} />
+                        <div className="admin-list-skel-line" style={{ width: '45%', height: '10px', marginTop: '6px' }} />
+                      </div>
+                    </li>
+                  ))
+                ) : applicants.map((item) => (
                   <li key={item.id}>
                     <button
                       type="button"
                       className={`admin-list-item ${item.id === selectedId ? 'active' : ''}`}
                       onClick={() => setSelectedId(item.id)}
                     >
-                      <div>
-                        <strong>
-                          {item.first_name} {item.last_name}
-                        </strong>
+                      <div className="admin-list-avatar" aria-hidden="true">
+                        {item.first_name?.slice(0, 1)}{item.last_name?.slice(0, 1)}
+                      </div>
+                      <div className="admin-list-info">
+                        <strong>{item.first_name} {item.last_name}</strong>
                         <span>{item.position_applied_for}</span>
                       </div>
                       <span className={`admin-chip ${item.status}`}>{formatStatus(item.status)}</span>
@@ -438,13 +455,20 @@ function AdminPage() {
               {selectedApplicant ? (
                 <div>
                   <div className="admin-detail-head">
-                    <div>
-                      <h3>
-                        {selectedApplicant.first_name} {selectedApplicant.last_name}
-                      </h3>
-                      <p>{selectedApplicant.position_applied_for}</p>
+                    <div className="admin-detail-identity">
+                      <div className="admin-detail-avatar" aria-hidden="true">
+                        {selectedApplicant.first_name?.slice(0, 1)}{selectedApplicant.last_name?.slice(0, 1)}
+                      </div>
+                      <div>
+                        <h3>{selectedApplicant.first_name} {selectedApplicant.last_name}</h3>
+                        <p>{selectedApplicant.position_applied_for}</p>
+                        <span className={`admin-chip ${selectedApplicant.status}`}>
+                          {formatStatus(selectedApplicant.status)}
+                        </span>
+                      </div>
                     </div>
                     <div className="admin-status">
+                      <label className="admin-status-label">Update status</label>
                       <select
                         className="select select-bordered"
                         value={selectedApplicant.status}
@@ -473,31 +497,82 @@ function AdminPage() {
                     </div>
                   </div>
                   <div className="admin-detail-grid">
-                    <div>
-                      <h4>Contact</h4>
-                      <p>Email: {selectedApplicant.email_address}</p>
-                      <p>Phone: {selectedApplicant.contact_number}</p>
-                      <p>Address: {selectedApplicant.permanent_address}</p>
+                    <div className="admin-detail-section">
+                      <h4 className="admin-detail-section-title">📬 Contact</h4>
+                      <dl className="admin-field-list">
+                        <div className="admin-field">
+                          <dt>Email</dt>
+                          <dd>{selectedApplicant.email_address}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>Phone</dt>
+                          <dd>{selectedApplicant.contact_number}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>Address</dt>
+                          <dd>{selectedApplicant.permanent_address}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>Gender</dt>
+                          <dd>{selectedApplicant.gender || 'N/A'}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>Civil Status</dt>
+                          <dd>{selectedApplicant.civil_status || 'N/A'}</dd>
+                        </div>
+                      </dl>
                     </div>
-                    <div>
-                      <h4>Education</h4>
-                      <p>Highest: {selectedApplicant.highest_education_level}</p>
-                      <p>Course: {selectedApplicant.bachelors_degree_course || 'N/A'}</p>
-                      <p>School: {selectedApplicant.last_school_attended}</p>
-                      <p>Year: {selectedApplicant.year_graduated || 'N/A'}</p>
+                    <div className="admin-detail-section">
+                      <h4 className="admin-detail-section-title">🎓 Education</h4>
+                      <dl className="admin-field-list">
+                        <div className="admin-field">
+                          <dt>Highest Level</dt>
+                          <dd>{selectedApplicant.highest_education_level}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>Course</dt>
+                          <dd>{selectedApplicant.bachelors_degree_course || 'N/A'}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>School</dt>
+                          <dd>{selectedApplicant.last_school_attended}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>Year Graduated</dt>
+                          <dd>{selectedApplicant.year_graduated || 'N/A'}</dd>
+                        </div>
+                      </dl>
                     </div>
-                    <div>
-                      <h4>Professional</h4>
-                      <p>Experience: {selectedApplicant.total_work_experience_years || 'N/A'} years</p>
-                      <p>Expected salary: {selectedApplicant.expected_salary || 'N/A'}</p>
-                      <p>Preferred location: {selectedApplicant.preferred_work_location}</p>
-                      <p>PRC license: {selectedApplicant.prc_license || 'N/A'}</p>
+                    <div className="admin-detail-section">
+                      <h4 className="admin-detail-section-title">💼 Professional</h4>
+                      <dl className="admin-field-list">
+                        <div className="admin-field">
+                          <dt>Experience</dt>
+                          <dd>{selectedApplicant.total_work_experience_years || 'N/A'} yrs</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>Expected Salary</dt>
+                          <dd>{selectedApplicant.expected_salary ? `₱${Number(selectedApplicant.expected_salary).toLocaleString()}` : 'N/A'}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>Preferred Location</dt>
+                          <dd>{selectedApplicant.preferred_work_location}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>PRC License</dt>
+                          <dd>{selectedApplicant.prc_license || 'N/A'}</dd>
+                        </div>
+                        <div className="admin-field">
+                          <dt>Vacancy Source</dt>
+                          <dd>{selectedApplicant.vacancy_source || 'N/A'}</dd>
+                        </div>
+                      </dl>
                     </div>
                   </div>
                   <div className="admin-notes">
                     <div className="admin-notes-head">
-                      <h4>HR notes</h4>
-                      {notesLoading ? <span>Loading...</span> : null}
+                      <h4>📝 HR Notes</h4>
+                      {notesLoading ? <span className="admin-notes-loading">Loading...</span> : null}
                     </div>
                     <form className="admin-note-form" onSubmit={handleNoteSubmit}>
                       <textarea
@@ -518,31 +593,35 @@ function AdminPage() {
                           <li key={note.id}>
                             <p>{note.note}</p>
                             <div className="admin-note-meta">
-                              <span>{note.user?.name || 'Recruiter'}</span>
+                              <span>✍️ {note.user?.name || 'Recruiter'}</span>
                               <span>{new Date(note.created_at).toLocaleString()}</span>
                             </div>
                           </li>
                         ))}
                       </ul>
-                    ) : (
-                      <p className="admin-empty">No notes yet.</p>
-                    )}
+                    ) : !notesLoading ? (
+                      <div className="admin-empty-state" style={{ padding: '1.5rem 0' }}>
+                        <div className="admin-empty-icon">📋</div>
+                        <p>No notes yet</p>
+                        <span>Add a note above to start tracking this applicant.</span>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="admin-detail-footer">
                     {selectedApplicant.cv_path ? (
                       <a
-                        className="link"
+                        className="admin-cv-btn"
                         href={`${apiBase}/storage/${selectedApplicant.cv_path}`}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        View CV
+                        📄 View CV
                       </a>
                     ) : (
-                      <span className="muted">No CV uploaded</span>
+                      <span className="admin-cv-missing">No CV uploaded</span>
                     )}
-                    <span className="muted">
-                      Submitted: {new Date(selectedApplicant.created_at).toLocaleDateString()}
+                    <span className="admin-submitted-date">
+                      Submitted {new Date(selectedApplicant.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
                   {adminMessage ? <span className="admin-alert success">{adminMessage}</span> : null}
