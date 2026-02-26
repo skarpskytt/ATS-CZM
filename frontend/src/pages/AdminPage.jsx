@@ -273,6 +273,17 @@ function AdminPage() {
 
   const selectedApplicant = applicants.find((item) => item.id === selectedId)
 
+  const getGreeting = () => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Good morning'
+    if (h < 18) return 'Good afternoon'
+    return 'Good evening'
+  }
+
+  const todayLabel = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  })
+
   return (
     <section className="admin-shell">
       {token ? (
@@ -359,14 +370,21 @@ function AdminPage() {
         </div>
       ) : (
         <div className="admin-content">
+          <div className="admin-welcome">
+            <div className="admin-welcome-text">
+              <h2>{getGreeting()}, {user?.name?.split(' ')[0] || 'there'} 👋</h2>
+              <p>Here's the applicant pipeline. Select someone to view their details.</p>
+            </div>
+            <span className="admin-welcome-date">{todayLabel}</span>
+          </div>
           <div className="admin-card">
             <div className="admin-card-head">
               <div>
                 <h2>Applicants</h2>
-                <p>Signed in as {user?.name || 'User'} ({user?.role || 'recruiter'}).</p>
+                <p>{applicants.length} applicant{applicants.length !== 1 ? 's' : ''} · Signed in as {user?.name || 'User'} ({user?.role || 'recruiter'})</p>
               </div>
               <NavLink to="/admin/applicants" className="btn btn-outline">
-                View applicants table
+                View full table
               </NavLink>
             </div>
             <div className="admin-layout">
@@ -531,7 +549,11 @@ function AdminPage() {
                   {adminError ? <span className="admin-alert error">{adminError}</span> : null}
                 </div>
               ) : (
-                <p className="admin-empty">Select an applicant to see details.</p>
+                <div className="admin-empty-state">
+                  <div className="admin-empty-icon">👈</div>
+                  <p>No applicant selected</p>
+                  <span>Pick someone from the pipeline to view their details.</span>
+                </div>
               )}
             </section>
           </div>

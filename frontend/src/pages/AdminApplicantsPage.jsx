@@ -144,6 +144,23 @@ function AdminApplicantsPage() {
 
   const formatStatus = (value) => value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
+  const getGreeting = () => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Good morning'
+    if (h < 18) return 'Good afternoon'
+    return 'Good evening'
+  }
+
+  const todayLabel = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  })
+
+  const handleLogout = () => {
+    localStorage.removeItem('ats_token')
+    setToken('')
+    setUser(null)
+  }
+
   return (
     <section className="admin-shell">
       <header className="admin-topbar">
@@ -173,6 +190,9 @@ function AdminApplicantsPage() {
                   <p className="admin-name">{user?.name || 'User'}</p>
                   <p className="admin-role">{user?.role || 'recruiter'}</p>
                 </div>
+                <button type="button" className="btn btn-sm btn-outline admin-logout-btn" onClick={handleLogout}>
+                  Logout
+                </button>
               </>
             ) : (
               <p className="admin-role">Sign in to continue</p>
@@ -182,6 +202,14 @@ function AdminApplicantsPage() {
       </header>
 
       <div className="admin-content">
+        <div className="admin-welcome">
+          <div className="admin-welcome-text">
+            <h2>{getGreeting()}, {user?.name?.split(' ')[0] || 'there'} 👋</h2>
+            <p>You have <strong>{total}</strong> applicant{total !== 1 ? 's' : ''} in the system.</p>
+          </div>
+          <span className="admin-welcome-date">{todayLabel}</span>
+        </div>
+
       <div className="admin-card">
         <div className="admin-card-head">
           <div>
@@ -295,9 +323,23 @@ function AdminApplicantsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="admin-table-empty">Loading applicants...</td>
-                </tr>
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={`skel-${i}`} style={{ opacity: 1 - i * 0.08 }}>
+                    {Array.from({ length: 7 }).map((__, j) => (
+                      <td key={j}>
+                        <div style={{
+                          height: '14px',
+                          borderRadius: '6px',
+                          background: 'linear-gradient(90deg, rgba(200,164,65,0.08) 25%, rgba(200,164,65,0.18) 50%, rgba(200,164,65,0.08) 75%)',
+                          backgroundSize: '800px 100%',
+                          animation: 'shimmer 1.4s ease-in-out infinite',
+                          animationDelay: `${i * 0.07}s`,
+                          width: j === 0 ? '120px' : j === 6 ? '50px' : '80px',
+                        }} />
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ) : applicants.length ? (
                 applicants.map((applicant) => (
                   <tr key={applicant.id}>
@@ -330,7 +372,13 @@ function AdminApplicantsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="admin-table-empty">No applicants found.</td>
+                  <td colSpan={7}>
+                    <div className="admin-empty-state">
+                      <div className="admin-empty-icon">🔍</div>
+                      <p>No applicants found</p>
+                      <span>Try adjusting your filters or search term.</span>
+                    </div>
+                  </td>
                 </tr>
               )}
             </tbody>
