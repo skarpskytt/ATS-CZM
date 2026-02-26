@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import AdminLayout from '../components/AdminLayout'
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -15,28 +16,23 @@ const STATUS_META = {
 }
 
 function AdminAnalyticsPage() {
-  const navigate = useNavigate()
-  const [token] = useState(() => localStorage.getItem('ats_token') || '')
-  const [user, setUser] = useState(null)
+  const { token } = useAuth()
   const [dashboard, setDashboard] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!token) { navigate('/admin'); return }
+    if (!token) return
 
     const load = async () => {
       setLoading(true)
       setError(null)
       try {
-        const [userRes, dashRes] = await Promise.all([
-          fetch(`${apiBase}/api/me`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${apiBase}/api/dashboard/overview`, { headers: { Authorization: `Bearer ${token}` } }),
-        ])
-        if (!userRes.ok) { navigate('/admin'); return }
+        const dashRes = await fetch(`${apiBase}/api/dashboard/overview`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (!dashRes.ok) throw new Error('Failed to load analytics')
-        const [userData, dashData] = await Promise.all([userRes.json(), dashRes.json()])
-        setUser(userData)
+        const dashData = await dashRes.json()
         setDashboard(dashData)
       } catch (err) {
         setError('Unable to load analytics data.')
@@ -50,33 +46,7 @@ function AdminAnalyticsPage() {
   const maxPositionCount = Math.max(...(dashboard?.by_position || []).map((p) => p.total), 1)
 
   return (
-    <section className="admin-shell">
-      <header className="admin-topbar">
-        <div className="admin-topbar-inner">
-          <div className="admin-brand">
-            <p className="admin-kicker">CZARK MAK CORPORATION</p>
-            <span className="admin-brand-name">Analytics</span>
-          </div>
-          <nav className="admin-nav">
-            <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>Dashboard</NavLink>
-            <NavLink to="/admin/analytics" className={({ isActive }) => (isActive ? 'active' : '')}>Analytics</NavLink>
-            <NavLink to="/admin/applicants" className={({ isActive }) => (isActive ? 'active' : '')}>Applicants</NavLink>
-          </nav>
-          <div className="admin-profile">
-            {user ? (
-              <>
-                <div className="admin-avatar" aria-hidden="true">{(user.name || 'U').slice(0, 1).toUpperCase()}</div>
-                <div>
-                  <p className="admin-name">{user.name}</p>
-                  <p className="admin-role">{user.role}</p>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </header>
-
-      <div className="admin-content">
+    <AdminLayout pageTitle="Analytics">
         {loading ? (
           <div className="admin-card">
             <div className="admin-card-head">
@@ -169,8 +139,7 @@ function AdminAnalyticsPage() {
             </div>
           </>
         )}
-      </div>
-    </section>
+    </AdminLayout>
   )
 }
 

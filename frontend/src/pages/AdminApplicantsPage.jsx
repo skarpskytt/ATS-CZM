@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import AdminLayout from '../components/AdminLayout'
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const statusOptions = [
@@ -15,8 +17,7 @@ const statusOptions = [
 
 function AdminApplicantsPage() {
   const navigate = useNavigate()
-  const [token, setToken] = useState(() => localStorage.getItem('ats_token') || '')
-  const [user, setUser] = useState(null)
+  const { token, user } = useAuth()
   const [applicants, setApplicants] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -41,18 +42,6 @@ function AdminApplicantsPage() {
       setDirection('asc')
     }
     setPage(1)
-  }
-
-  const loadUser = async (activeToken) => {
-    const response = await fetch(`${apiBase}/api/me`, {
-      headers: { Authorization: `Bearer ${activeToken}` },
-    })
-
-    if (!response.ok) {
-      throw new Error('Unauthorized')
-    }
-
-    return response.json()
   }
 
   const loadPositions = async (activeToken) => {
@@ -100,21 +89,8 @@ function AdminApplicantsPage() {
   }
 
   useEffect(() => {
-    if (!token) {
-      setUser(null)
-      return
-    }
-
-    loadUser(token)
-      .then((profile) => {
-        setUser(profile)
-        loadPositions(token)
-      })
-      .catch(() => {
-        setToken('')
-        localStorage.removeItem('ats_token')
-        setUser(null)
-      })
+    if (!token) return
+    loadPositions(token)
   }, [token])
 
   useEffect(() => {
@@ -155,53 +131,8 @@ function AdminApplicantsPage() {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   })
 
-  const handleLogout = () => {
-    localStorage.removeItem('ats_token')
-    setToken('')
-    setUser(null)
-  }
-
   return (
-    <section className="admin-shell">
-      <header className="admin-topbar">
-        <div className="admin-topbar-inner">
-          <div className="admin-brand">
-            <p className="admin-kicker">CZARK MAK CORPORATION</p>
-            <span className="admin-brand-name">Applicants</span>
-          </div>
-          <nav className="admin-nav">
-            <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
-              Dashboard
-            </NavLink>
-            <NavLink to="/admin/analytics" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Analytics
-            </NavLink>
-            <NavLink to="/admin/applicants" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Applicants
-            </NavLink>
-          </nav>
-          <div className="admin-profile">
-            {token ? (
-              <>
-                <div className="admin-avatar" aria-hidden="true">
-                  {(user?.name || 'User').slice(0, 1).toUpperCase()}
-                </div>
-                <div>
-                  <p className="admin-name">{user?.name || 'User'}</p>
-                  <p className="admin-role">{user?.role || 'recruiter'}</p>
-                </div>
-                <button type="button" className="btn btn-sm btn-outline admin-logout-btn" onClick={handleLogout}>
-                  Logout
-                </button>
-              </>
-            ) : (
-              <p className="admin-role">Sign in to continue</p>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <div className="admin-content">
+    <AdminLayout pageTitle="Applicants">
         <div className="admin-welcome">
           <div className="admin-welcome-text">
             <h2>{getGreeting()}, {user?.name?.split(' ')[0] || 'there'} 👋</h2>
@@ -409,8 +340,7 @@ function AdminApplicantsPage() {
           </div>
         </div>
       </div>
-      </div>
-    </section>
+    </AdminLayout>
   )
 }
 

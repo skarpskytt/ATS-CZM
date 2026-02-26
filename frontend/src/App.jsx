@@ -1,17 +1,22 @@
 import { BrowserRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
 import ApplyPage from './pages/ApplyPage'
 import AdminPage from './pages/AdminPage'
 import AdminApplicantsPage from './pages/AdminApplicantsPage'
 import AdminAnalyticsPage from './pages/AdminAnalyticsPage'
+import AdminLoginPage from './pages/AdminLoginPage'
 import AdminForgotPasswordPage from './pages/AdminForgotPasswordPage'
 import AdminResetPasswordPage from './pages/AdminResetPasswordPage'
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 
@@ -62,11 +67,12 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Navigate to="/apply" replace />} />
         <Route path="/apply" element={<ApplyPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+        <Route path="/admin/analytics" element={<ProtectedRoute><AdminAnalyticsPage /></ProtectedRoute>} />
+        <Route path="/admin/applicants" element={<ProtectedRoute><AdminApplicantsPage /></ProtectedRoute>} />
         <Route path="/admin/forgot-password" element={<AdminForgotPasswordPage />} />
         <Route path="/admin/reset-password" element={<AdminResetPasswordPage />} />
-        <Route path="/admin/applicants" element={<AdminApplicantsPage />} />
         <Route path="*" element={<Navigate to="/apply" replace />} />
       </Routes>
     </div>
