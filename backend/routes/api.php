@@ -22,5 +22,5 @@ Route::middleware('auth:sanctum')->group(function (): void {
 	Route::post('applicants/{applicant}/notes', [ApplicantNoteController::class, 'store']);
 
 	Route::get('dashboard/overview', [DashboardController::class, 'overview']);
-	Route::apiResource('positions', PositionController::class);
+	Route::apiResource('positions', PositionController::class)->except(['index']);
 });
