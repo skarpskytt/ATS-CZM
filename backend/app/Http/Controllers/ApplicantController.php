@@ -60,7 +60,7 @@ class ApplicantController extends Controller
             $direction = 'desc';
         }
 
-        return $query->orderBy($sort, $direction)->paginate(20);
+        return $query->orderBy($sort, $direction)->paginate($request->integer('per_page', 20));
     }
 
     public function store(Request $request)

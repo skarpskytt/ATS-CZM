@@ -50,11 +50,17 @@ function AdminPage() {
   const [notesError, setNotesError] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [noteSaving, setNoteSaving] = useState(false)
+  const [page, setPage] = useState(1)
+  const [lastPage, setLastPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
   const loadApplicants = async (activeToken, filters = {}, preferredId = null) => {
     setLoadingApplicants(true)
     try {
-      const params = new URLSearchParams(filters)
+      const cleanFilters = Object.fromEntries(
+        Object.entries(filters).filter(([, v]) => v !== undefined && v !== null && v !== '')
+      )
+      const params = new URLSearchParams(cleanFilters)
       const queryString = params.toString()
       const response = await fetch(`${apiBase}/api/applicants${queryString ? `?${queryString}` : ''}`, {
         headers: { Authorization: `Bearer ${activeToken}` },
@@ -65,8 +71,16 @@ function AdminPage() {
       }
 
       const payload = await response.json()
-      setApplicants(payload.data || [])
-      setSelectedId(preferredId || payload.data?.[0]?.id || null)
+      const data = payload.data || []
+      setApplicants(data)
+      setPage(payload.meta?.current_page ?? payload.current_page ?? 1)
+      setLastPage(payload.meta?.last_page ?? payload.last_page ?? 1)
+      setTotal(payload.meta?.total ?? payload.total ?? 0)
+      setSelectedId((prev) => {
+        if (preferredId !== null) return preferredId
+        if (prev && data.some((a) => a.id === prev)) return prev
+        return data[0]?.id || null
+      })
     } finally {
       setLoadingApplicants(false)
     }
@@ -104,7 +118,7 @@ function AdminPage() {
     }
 
     const urlApplicantId = searchParams.get('applicant') ? Number(searchParams.get('applicant')) : null
-    loadApplicants(token, {}, urlApplicantId)
+    loadApplicants(token, { per_page: 10 }, urlApplicantId)
   }, [token])
 
   useEffect(() => {
@@ -116,11 +130,13 @@ function AdminPage() {
       loadApplicants(token, {
         search: searchTerm || undefined,
         status: statusFilter || undefined,
+        page,
+        per_page: 10,
       })
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [token, searchTerm, statusFilter])
+  }, [searchTerm, statusFilter, page, token])
 
   useEffect(() => {
     if (!token || !selectedId) {
@@ -218,11 +234,11 @@ function AdminPage() {
         </div>
         <span className="admin-welcome-date">{todayLabel}</span>
       </div>
-      <div className="admin-card">
+      <div className="admin-card admin-card-pipeline">
         <div className="admin-card-head">
           <div>
             <h2>Applicants</h2>
-            <p>{applicants.length} applicant{applicants.length !== 1 ? 's' : ''} · Signed in as {user?.name || 'User'} ({user?.role || 'recruiter'})</p>
+            <p>{total} applicant{total !== 1 ? 's' : ''} · Signed in as {user?.name || 'User'} ({user?.role || 'recruiter'})</p>
           </div>
           <NavLink to="/admin/applicants" className="btn btn-outline">
             View full table
@@ -232,7 +248,7 @@ function AdminPage() {
           <aside className="admin-panel admin-sidebar">
             <div className="admin-panel-head">
               <h4>Pipeline</h4>
-              {loadingApplicants ? <span>Loading...</span> : <span>{applicants.length} applicants</span>}
+              {loadingApplicants ? <span>Loading...</span> : <span>{total} applicants</span>}
             </div>
             <div className="admin-filters">
               <input
@@ -240,12 +256,12 @@ function AdminPage() {
                 type="search"
                 placeholder="Search name, email, role"
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                onChange={(event) => { setPage(1); setSearchTerm(event.target.value) }}
               />
               <select
                 className="select select-bordered"
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
+                onChange={(event) => { setPage(1); setStatusFilter(event.target.value) }}
               >
                 <option value="">All statuses</option>
                 {statusOptions.map((option) => (
@@ -284,6 +300,25 @@ function AdminPage() {
                 </li>
               ))}
             </ul>
+            <div className="admin-list-pagination">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  ‹
+                </button>
+                <span>{page} / {lastPage}</span>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  ›
+                </button>
+              </div>
           </aside>
           <section className="admin-panel admin-detail">
             {selectedApplicant ? (
