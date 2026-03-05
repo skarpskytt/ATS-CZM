@@ -1,81 +1,104 @@
 # Applicant Tracking System (ATS)
 
-## Project Overview
-A web-based recruitment system that allows applicants to submit information through a public form and enables HR (admin/recruiter) users to manage and track applications through a full pipeline dashboard.
-
-**Stack**
-- Backend: Laravel (REST API, Laravel Sanctum)
-- Frontend: React + Vite + Tailwind CSS + DaisyUI
-- Database: MySQL
-- Charts: Recharts
-- File storage: Local storage (CV uploads)
+A full-stack web-based recruitment platform that lets candidates apply through a public form and gives HR teams a complete dashboard to manage, track, and communicate with applicants through every stage of the hiring pipeline.
 
 ---
 
-## Current Features
+## Tech Stack
 
-### Public Applicant Module
-- Public application form at `/apply`
-- Submit applicant details and upload CV (PDF/DOC/DOCX)
-- Email confirmation sent to applicant on submission
-
-### Admin/Recruiter Module
-- Secure login at `/admin/login` with JWT-style token via Laravel Sanctum
-- Auth context (`AuthContext`) with protected routes
-- Persistent login via `localStorage` token
-
-### Dashboard (`/admin`)
-- Applicant pipeline sidebar with search + status filter
-- Paginated list (10 per page) with prev/next controls
-- Applicant detail panel — view full profile, CV download, update status
-- HR notes — add and view recruiter notes per applicant
-- Inline status update with email notification to applicant
-
-### Applicants Table (`/admin/applicants`)
-- Full paginated table (20 per page) with sort by name, status, date
-- Filters: search, status, position, date range
-- Clickable rows — navigate directly to pipeline detail
-- Inline status dropdown per row (live PATCH update)
-- PDF export of current page via browser print dialog
-- "Showing X–Y of N" count with active filter indicator
-
-### Analytics (`/admin/analytics`)
-- KPI summary bar: Total Applicants, Last 30 Days, Total Hired, Hire Rate
-- Donut chart — pipeline breakdown by status (Recharts)
-- Horizontal bar chart — top positions by application volume (Recharts)
-- Skeletons while loading
-
-### Status Pipeline
-- `submitted` → `under_review` → `shortlisted` → `interview_scheduled` → `offer_extended` → `hired`
-- Also: `rejected`, `withdrawn`
-- Email sent to applicant on every status change
+| Layer | Technology |
+|---|---|
+| Backend | Laravel 12 (PHP 8.2) � REST API |
+| Frontend | React 19 + Vite 7 |
+| Styling | Tailwind CSS + DaisyUI |
+| Database | MySQL |
+| Auth | Laravel Sanctum (Bearer token, 8-hour expiry) |
+| Charts | Recharts |
+| Email | Gmail SMTP (configurable) |
+| File Storage | Local storage (CV uploads) |
 
 ---
 
-## Database Structure
-Core tables:
-- `applicants` — all applicant data + CV path + status
-- `applicant_notes` — HR notes linked to applicants
-- `positions` — job positions for filtering
-- `users` — admin/recruiter accounts with roles
-- `personal_access_tokens` — Sanctum tokens
-- `jobs`, `cache`, `sessions` (Laravel defaults)
+## Features
+
+### Public Applicant Form (`/apply`)
+- Submit name, contact, position, and upload a CV (PDF / DOC / DOCX, max 5 MB)
+- Email confirmation sent to applicant on successful submission
+
+### Admin / Recruiter Panel
+
+#### Login (`/admin/login`)
+- Secure login with Laravel Sanctum token authentication
+- Tokens expire after 8 hours; old tokens revoked on new login
+- Rate-limited to 10 attempts per minute
+
+#### Pipeline Dashboard (`/admin`)
+- Sidebar with paginated applicant list (10 per page)
+- Search and status filter
+- Applicant detail panel: full profile, CV download, status update, HR notes
+- Inline status update triggers email notification to applicant
+
+#### Applicants Table (`/admin/applicants`)
+- Paginated table (20 per page) with sort by name, status, and date
+- Filters: keyword search, status, position, date range
+- Color-coded status chips with inline status dropdown
+- Delete applicant with confirmation modal
+- PDF export via browser print dialog
+- Responsive � hides less critical columns on smaller screens
+
+#### Analytics (`/admin/analytics`)
+- **KPI cards:** Total Applicants (with 30-day sub-count), In Pipeline, Total Hired, Rejected
+- **Monthly Applications** � area chart (last 12 months)
+- **Pipeline Breakdown** � donut chart by status
+- **Top Positions** � horizontal bar chart by application volume
+- **Application Sources** � bar chart by source
+
+#### Positions Manager (`/admin/positions`)
+- Create, edit, and delete job positions
+- Toggle position active/inactive status
+- Paginated table with responsive column hiding
+
+#### Users Manager (`/admin/users`)
+- Create and manage admin/recruiter accounts
+- Role assignment (admin / recruiter)
+- Password reset with show/hide toggle
 
 ---
 
-## Security Features
-- API authentication via Laravel Sanctum (Bearer token)
+## Status Pipeline
+
+```
+submitted ? under_review ? shortlisted ? interview_scheduled ? offer_extended ? hired
+                                                                              ? rejected
+                                                                              ? withdrawn
+```
+
+Applicant is emailed on every status change.
+
+---
+
+## Security
+
+- Laravel Sanctum Bearer token auth on all protected routes
+- Tokens expire in 8 hours; old tokens revoked on login
+- Rate limiting: login (10/min), password reset (5/min), public form (20/min)
+- `APP_DEBUG=false` in production
+- CORS restricted to configured frontend origin
+- Role-based access control (`admin` / `recruiter`)
 - Input validation on all endpoints
-- File type validation (PDF/DOC/DOCX only)
-- File size restriction (5MB)
-- Role-based access (`admin` / `recruiter`)
-- Protected frontend routes (redirect to login if unauthenticated)
+- File type and size validation (PDF/DOC/DOCX, 5 MB max)
 
 ---
 
-## Installation Guide
+## Installation
 
-### 1) Backend Setup (Laravel)
+### Prerequisites
+- PHP 8.2+, Composer
+- Node.js 18+, npm
+- MySQL
+
+### Backend Setup
+
 ```bash
 cd backend
 composer install
@@ -83,86 +106,154 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Update `.env`:
-```
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
+Edit `.env` with your database and mail credentials:
+
+```env
 DB_DATABASE=ats
 DB_USERNAME=root
 DB_PASSWORD=your_password
+
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your@email.com
+MAIL_PASSWORD=your_app_password
+MAIL_FROM_ADDRESS=your@email.com
+MAIL_FROM_NAME="ATS System"
+
+FRONTEND_URL=http://localhost:5173
 ```
 
 Run migrations and storage link:
+
 ```bash
 php artisan migrate
 php artisan storage:link
 ```
 
-(Optional) seed test data:
+Seed demo accounts (optional):
+
 ```bash
 php artisan db:seed
 ```
 
-Start backend:
+Start the backend:
+
 ```bash
 php artisan serve
-# → http://127.0.0.1:8000
+# ? http://127.0.0.1:8000
 ```
 
-### 2) Frontend Setup (React)
+### Frontend Setup
+
 ```bash
 cd frontend
 npm install
 ```
 
 Create `frontend/.env`:
-```
+
+```env
 VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
-Start frontend:
+Start the frontend:
+
 ```bash
 npm run dev
-# → http://localhost:5173
+# ? http://localhost:5173
+```
+
+---
+
+## Network / LAN Access
+
+To allow access from other devices on the same network:
+
+```bash
+# Backend � bind to all interfaces
+php artisan serve --host=0.0.0.0 --port=8000
+
+# Frontend � expose on network
+npm run dev -- --host
+```
+
+Update `frontend/.env` to use the host machine's LAN IP:
+
+```env
+VITE_API_BASE_URL=http://192.168.x.x:8000
 ```
 
 ---
 
 ## App Routes
+
 | Route | Description |
 |---|---|
 | `/apply` | Public applicant submission form |
-| `/admin/login` | Admin/recruiter login |
+| `/admin/login` | Admin / recruiter login |
 | `/admin` | Pipeline dashboard |
 | `/admin/applicants` | Full applicants table |
-| `/admin/analytics` | Charts & analytics |
+| `/admin/analytics` | Charts and analytics |
+| `/admin/positions` | Positions management |
+| `/admin/users` | User account management |
 
 ---
 
 ## API Endpoints
 
-**Public**
-- `POST /api/public/applicants` — submit application (multipart/form-data, CV field: `upload_cv`)
+### Public
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/public/applicants` | Submit application (multipart/form-data) |
 
-**Auth**
-- `POST /api/login`
-- `POST /api/logout`
-- `GET /api/me`
+### Authentication
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/login` | Login (returns Sanctum token) |
+| POST | `/api/logout` | Logout (revokes token) |
+| GET | `/api/me` | Get authenticated user |
+| POST | `/api/forgot-password` | Send password reset link |
+| POST | `/api/reset-password` | Reset password |
 
-**Protected (Bearer token required)**
-- `GET /api/applicants?search=&status=&position=&start_date=&end_date=&sort=&direction=&page=&per_page=`
-- `GET /api/applicants/{id}`
-- `PATCH /api/applicants/{id}`
-- `DELETE /api/applicants/{id}`
-- `GET /api/applicants/{id}/notes`
-- `POST /api/applicants/{id}/notes`
-- `GET /api/positions`
-- `GET /api/dashboard/overview`
+### Protected (Bearer token required)
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/applicants` | List applicants (paginated, filterable) |
+| GET | `/api/applicants/{id}` | Get single applicant |
+| PATCH | `/api/applicants/{id}` | Update applicant |
+| DELETE | `/api/applicants/{id}` | Delete applicant |
+| GET | `/api/applicants/{id}/notes` | Get HR notes |
+| POST | `/api/applicants/{id}/notes` | Add HR note |
+| GET | `/api/positions/admin` | List positions (paginated) |
+| GET | `/api/positions/all` | All positions (for dropdowns) |
+| POST | `/api/positions` | Create position |
+| PUT | `/api/positions/{id}` | Update position |
+| DELETE | `/api/positions/{id}` | Delete position |
+| GET | `/api/users` | List users |
+| POST | `/api/users` | Create user |
+| PUT | `/api/users/{id}` | Update user |
+| DELETE | `/api/users/{id}` | Delete user |
+| GET | `/api/dashboard/overview` | Pipeline dashboard data |
+| GET | `/api/analytics` | Analytics data |
 
 ---
 
-## Seeded Accounts
+## Database Tables
+
+| Table | Description |
+|---|---|
+| `applicants` | Applicant data, CV path, status |
+| `applicant_notes` | HR notes linked to applicants |
+| `positions` | Job positions |
+| `users` | Admin / recruiter accounts with roles |
+| `personal_access_tokens` | Sanctum tokens |
+| `jobs`, `cache`, `sessions` | Laravel defaults |
+
+---
+
+## Demo Accounts (after seeding)
+
 | Role | Email | Password |
 |---|---|---|
 | Admin | `admin@example.com` | `password` |
@@ -170,174 +261,42 @@ npm run dev
 
 ---
 
+## Project Structure
+
+```
+ATS/
++-- backend/          # Laravel 12 REST API
+�   +-- app/
+�   �   +-- Http/Controllers/
+�   �   +-- Models/
+�   �   +-- Notifications/
+�   +-- database/
+�   �   +-- migrations/
+�   �   +-- seeders/
+�   +-- routes/
+�       +-- api.php
++-- frontend/         # React 19 + Vite
+    +-- src/
+        +-- components/
+        +-- context/
+        +-- pages/
+```
+
+---
+
 ## Roadmap
 
-### Phase 1 ✅
-- Public application form
-- Applicant storage + CV upload
-- Admin login (Sanctum)
-- Applicant listing and detail view
-- Status update with email notifications
-
-### Phase 2 ✅
-- Auth refactor (AuthContext, ProtectedRoute, AdminLayout)
-- Pipeline sidebar with pagination + search/filter
-- HR notes per applicant
-- Full applicants table with sort, filter, inline status, PDF export
-- Analytics page with KPI cards, donut chart, bar chart
-- Backend `per_page` support
-
-### Phase 3 (Planned)
-- Email automation enhancements
-- Excel/CSV reporting
-- Job posting management
-- Performance optimization & deployment
-
-
-## Project Overview
-The Applicant Tracking System (ATS) is a web-based recruitment system that allows applicants to submit information through a public form and enables HR (admin/recruiter) users to manage and track applications.
-
-**Stack**
-- Backend: Laravel (API)
-- Frontend: React (Vite)
-- Database: MySQL
-- Authentication: Laravel Sanctum
-- File storage: Local storage (CV uploads)
-
-## Current Features
-### Public Applicant Module
-- Public application form at `/apply`
-- Submit applicant details and upload CV (PDF/DOC/DOCX)
-- Email confirmation to applicant
-
-### Admin/Recruiter Module
-- Secure login at `/admin`
-- View applicants list
-- View applicant details
-- Download or view CV
-- Update applicant status (emails applicant on status change)
-
-### Status Pipeline (Current)
-- submitted
-- under_review
-- shortlisted
-- rejected
-- hired
-
-## System Modules (Planned)
-- Job position management
-- Applicant notes
-- Filtering and search
-- Dashboard analytics
-
-## Database Structure (Current)
-Core tables:
-- `applicants`
-- `users`
-- `personal_access_tokens`
-- `jobs`, `cache`, `sessions` (Laravel defaults)
-
-## Security Features
-- API authentication via Laravel Sanctum
-- Input validation
-- File type validation (PDF/DOC/DOCX)
-- File size restriction (5MB)
-- Role-based access (admin/recruiter)
-
-## Installation Guide
-### 1) Backend Setup (Laravel)
-```bash
-cd backend
-composer install
-cp .env.example .env
-php artisan key:generate
-```
-
-Update `.env`:
-```
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=ats
-DB_USERNAME=root
-DB_PASSWORD=your_password
-```
-
-Run migrations and storage link:
-```bash
-php artisan migrate
-php artisan storage:link
-```
-
-(Optional) seed test data:
-```bash
-php artisan db:seed
-```
-
-Start backend:
-```bash
-php artisan serve
-```
-
-### 2) Frontend Setup (React)
-```bash
-cd frontend
-npm install
-```
-
-Set API base URL (create `frontend/.env`):
-```
-VITE_API_BASE_URL=http://127.0.0.1:8000
-```
-
-Start frontend:
-```bash
-npm run dev
-```
-
-## App Routes
-- Public form: `http://localhost:5174/apply`
-- Admin/recruiter UI: `http://localhost:5174/admin`
-
-## API Endpoints (Current)
-Public:
-- `POST /api/public/applicants` (multipart/form-data, CV file field `upload_cv`)
-
-Auth:
-- `POST /api/login`
-- `POST /api/logout`
-- `GET /api/me`
-
-Protected (Admin/Recruiter):
-- `GET /api/applicants`
-- `GET /api/applicants/{id}`
-- `PATCH /api/applicants/{id}`
-- `DELETE /api/applicants/{id}`
-
-## Seeded Accounts (If DB Seed Run)
-- Admin: `admin@example.com` / `password`
-- Recruiter: `recruiter@example.com` / `password`
-
-## Developer Notes
-- Do not store plaintext passwords (Laravel uses hashing by default).
-- Validate all uploaded files.
-- Configure SMTP in `.env` for real email delivery.
-
-## Roadmap
-### Phase 1 (Done)
-- Public application form
-- Applicant storage
-- Admin login
-- Applicant listing and detail view
-
-### Phase 2 (Planned)
-- Status pipeline enhancements
-- Filtering and search
-- HR notes
-- Dashboard analytics
-
-### Phase 3 (Planned)
-- Email automation enhancements
-- Reporting (Excel/PDF)
-- Performance optimization
-- Deployment
+- [x] Public application form with CV upload
+- [x] Email notifications (submission + status changes)
+- [x] Admin login with Sanctum token auth
+- [x] Pipeline dashboard with HR notes
+- [x] Applicants table with filters, sort, and PDF export
+- [x] Analytics page with KPI cards and charts
+- [x] Positions management
+- [x] Users management
+- [x] Responsive UI (mobile to desktop)
+- [x] Rate limiting and security hardening
+- [ ] Excel / CSV export
+- [ ] Interview scheduling integration
+- [ ] HTTPS / SSL deployment
+- [ ] Docker setup
