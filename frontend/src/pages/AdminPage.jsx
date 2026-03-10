@@ -60,6 +60,10 @@ function AdminPage() {
   const [resumeLoading, setResumeLoading] = useState(false)
   const [resumeError, setResumeError]     = useState(null)
 
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting]         = useState(false)
+  const [statusSaving, setStatusSaving] = useState(false)
+
   const loadApplicants = async (activeToken, filters = {}, preferredId = null) => {
     setLoadingApplicants(true)
     try {
@@ -220,24 +224,53 @@ function AdminPage() {
   const formatStatus = (value) => value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
   const toName = (str) => str ? str.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : ''
 
-  const handleDeleteApplicant = async (applicantId) => {
-    if (!window.confirm('Delete this applicant permanently? This cannot be undone.')) return
+  const avatarPalettes = [
+    { background: 'linear-gradient(135deg,#0f3d2e,#1a6644)', color: '#c8a441' },
+    { background: 'linear-gradient(135deg,#1e3a8a,#2563eb)', color: '#bfdbfe' },
+    { background: 'linear-gradient(135deg,#7c2d12,#c2410c)', color: '#fed7aa' },
+    { background: 'linear-gradient(135deg,#4a044e,#86198f)', color: '#f5d0fe' },
+    { background: 'linear-gradient(135deg,#0f4c4c,#0d9488)', color: '#99f6e4' },
+    { background: 'linear-gradient(135deg,#78350f,#d97706)', color: '#fef3c7' },
+  ]
+  const getAvatarColor = (firstName = '', lastName = '') => {
+    const str = `${firstName}${lastName}`
+    let hash = 0
+    for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) | 0
+    return avatarPalettes[Math.abs(hash) % avatarPalettes.length]
+  }
+
+  const timeAgo = (dateStr) => {
+    const diff = (Date.now() - new Date(dateStr)) / 1000
+    if (diff < 60) return 'just now'
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  const handleDeleteApplicant = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
     try {
-      const res = await fetch(`${apiBase}/api/applicants/${applicantId}`, {
+      const res = await fetch(`${apiBase}/api/applicants/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error()
-      setApplicants((prev) => prev.filter((a) => a.id !== applicantId))
+      setApplicants((prev) => prev.filter((a) => a.id !== deleteTarget.id))
       setSelectedId(null)
+      setDeleteTarget(null)
     } catch {
       setAdminError('Failed to delete applicant.')
+    } finally {
+      setDeleting(false)
     }
   }
 
   const handleStatusSave = async (applicantId, status) => {
     setAdminMessage(null)
     setAdminError(null)
+    setStatusSaving(true)
 
     try {
       const response = await fetch(`${apiBase}/api/applicants/${applicantId}`, {
@@ -262,6 +295,8 @@ function AdminPage() {
       setAdminMessage('Status updated.')
     } catch (err) {
       setAdminError('Unable to update status. Please try again.')
+    } finally {
+      setStatusSaving(false)
     }
   }
 
@@ -334,6 +369,14 @@ function AdminPage() {
                     </div>
                   </li>
                 ))
+              ) : applicants.length === 0 ? (
+                <li>
+                  <div className="admin-empty-filter-state">
+                    <span>🔍</span>
+                    <p>No applicants match your filters.</p>
+                    <button type="button" onClick={() => { setSearchTerm(''); setStatusFilter('') }}>Clear filters</button>
+                  </div>
+                </li>
               ) : applicants.map((item) => (
                 <li key={item.id}>
                   <button
@@ -341,13 +384,14 @@ function AdminPage() {
                     className={`admin-list-item ${item.id === selectedId ? 'active' : ''}`}
                     onClick={() => setSelectedId(item.id)}
                   >
-                    <div className="admin-list-avatar" aria-hidden="true">
+                    <div className="admin-list-avatar" aria-hidden="true" style={getAvatarColor(item.first_name, item.last_name)}>
                       {item.first_name?.slice(0, 1)}{item.last_name?.slice(0, 1)}
                     </div>
                     <div className="admin-list-info">
                       <strong>{toName(item.first_name)} {toName(item.last_name)}</strong>
                       <span className="admin-list-position">{item.position_applied_for}</span>
                       <span className={`admin-chip ${item.status}`}>{formatStatus(item.status)}</span>
+                      <span className="admin-list-date">Applied {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                     </div>
                   </button>
                 </li>
@@ -378,7 +422,7 @@ function AdminPage() {
               <div>
                 <div className="admin-detail-head">
                   <div className="admin-detail-identity">
-                    <div className="admin-detail-avatar" aria-hidden="true">
+                    <div className="admin-detail-avatar" aria-hidden="true" style={getAvatarColor(selectedApplicant.first_name, selectedApplicant.last_name)}>
                       {selectedApplicant.first_name?.slice(0, 1)}{selectedApplicant.last_name?.slice(0, 1)}
                     </div>
                     <div>
@@ -414,9 +458,10 @@ function AdminPage() {
                         <button
                           type="button"
                           className="btn btn-sm apply-submit"
+                          disabled={statusSaving}
                           onClick={() => handleStatusSave(selectedApplicant.id, selectedApplicant.status)}
                         >
-                          Save
+                          {statusSaving ? (<><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Saving…</>) : 'Save'}
                         </button>
                       </div>
                     )}
@@ -424,7 +469,7 @@ function AdminPage() {
                       <button
                         type="button"
                         className="btn btn-sm btn-error btn-outline"
-                        onClick={() => handleDeleteApplicant(selectedApplicant.id)}
+                        onClick={() => setDeleteTarget({ id: selectedApplicant.id, name: `${toName(selectedApplicant.first_name)} ${toName(selectedApplicant.last_name)}` })}
                       >
                         Delete Applicant
                       </button>
@@ -454,6 +499,14 @@ function AdminPage() {
                       <div className="admin-field">
                         <dt>Civil Status</dt>
                         <dd>{selectedApplicant.civil_status || 'N/A'}</dd>
+                      </div>
+                      <div className="admin-field">
+                        <dt>Birthdate</dt>
+                        <dd>{selectedApplicant.birthdate ? new Date(selectedApplicant.birthdate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}</dd>
+                      </div>
+                      <div className="admin-field">
+                        <dt>Age</dt>
+                        <dd>{selectedApplicant.age || 'N/A'}</dd>
                       </div>
                     </dl>
                   </div>
@@ -510,15 +563,6 @@ function AdminPage() {
                     <h4 className="admin-detail-section-title" style={{ margin: 0, border: 0, padding: 0 }}>📄 Resume / CV</h4>
                     {selectedApplicant.cv_path ? (
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        {showResume && (
-                          <button
-                            type="button"
-                            className="admin-cv-btn admin-cv-btn-outline"
-                            onClick={() => setShowResume(false)}
-                          >
-                            Hide
-                          </button>
-                        )}
                         <button
                           type="button"
                           className="admin-cv-btn"
@@ -610,7 +654,7 @@ function AdminPage() {
                           <p>{note.note}</p>
                           <div className="admin-note-meta">
                             <span>✍️ {note.user?.name || 'Recruiter'}</span>
-                            <span>{new Date(note.created_at).toLocaleString()}</span>
+                            <span title={new Date(note.created_at).toLocaleString()}>{timeAgo(note.created_at)}</span>
                           </div>
                         </li>
                       ))}
@@ -641,6 +685,41 @@ function AdminPage() {
           </section>
         </div>
       </div>
+      {deleteTarget && (
+        <div className="del-modal-backdrop" onClick={() => !deleting && setDeleteTarget(null)}>
+          <div className="del-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="del-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </div>
+            <h3 className="del-modal-title">Delete applicant?</h3>
+            <p className="del-modal-body">
+              <strong>{deleteTarget.name}</strong> will be permanently removed from the system. This action cannot be undone.
+            </p>
+            <div className="del-modal-actions">
+              <button
+                type="button"
+                className="del-modal-cancel"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="del-modal-confirm"
+                onClick={handleDeleteApplicant}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Deleting…</>
+                ) : (
+                  <>Delete applicant</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   )
 }

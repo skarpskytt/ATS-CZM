@@ -38,6 +38,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // delete - dynamic permission: canDelete
     Route::delete('applicants/{applicant}', [ApplicantController::class, 'destroy'])
         ->middleware('perm:canDelete');
+    Route::delete('applicants', [ApplicantController::class, 'bulkDestroy'])
+        ->middleware('perm:canDelete');
 
     // Analytics - dynamic permission: canViewAnalytics
     Route::get('dashboard/overview', [DashboardController::class, 'overview'])

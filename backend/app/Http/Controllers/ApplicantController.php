@@ -179,6 +179,28 @@ class ApplicantController extends Controller
         return response()->noContent();
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids'   => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer', 'exists:applicants,id'],
+        ]);
+
+        $applicants = Applicant::whereIn('id', $request->input('ids'))->get();
+
+        foreach ($applicants as $applicant) {
+            if ($applicant->cv_path) {
+                Storage::disk('public')->delete($applicant->cv_path);
+            }
+            $fullName = $applicant->last_name . ', ' . $applicant->first_name;
+            $applicant->delete();
+            AuditLog::log('delete', 'applicant', $applicant->id, $fullName,
+                "Bulk-deleted applicant '{$fullName}'");
+        }
+
+        return response()->json(['deleted' => $applicants->count()]);
+    }
+
     public function cvDownload(Applicant $applicant)
     {
         if (!$applicant->cv_path) {

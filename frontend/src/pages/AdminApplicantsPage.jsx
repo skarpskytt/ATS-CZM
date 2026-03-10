@@ -35,6 +35,30 @@ const toName = (str) => str ? str.trim().toLowerCase().replace(/\b\w/g, (c) => c
 const getInitials = (first, last) =>
   `${first?.slice(0, 1) ?? ''}${last?.slice(0, 1) ?? ''}`.toUpperCase()
 
+const avatarPalettes = [
+  { background: 'linear-gradient(135deg,#0f3d2e,#1a6644)', color: '#c8a441' },
+  { background: 'linear-gradient(135deg,#1e3a8a,#2563eb)', color: '#bfdbfe' },
+  { background: 'linear-gradient(135deg,#7c2d12,#c2410c)', color: '#fed7aa' },
+  { background: 'linear-gradient(135deg,#4a044e,#86198f)', color: '#f5d0fe' },
+  { background: 'linear-gradient(135deg,#0f4c4c,#0d9488)', color: '#99f6e4' },
+  { background: 'linear-gradient(135deg,#78350f,#d97706)', color: '#fef3c7' },
+]
+const getAvatarColor = (firstName = '', lastName = '') => {
+  const str = `${firstName}${lastName}`
+  let hash = 0
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) | 0
+  return avatarPalettes[Math.abs(hash) % avatarPalettes.length]
+}
+
+const timeAgo = (dateStr) => {
+  const diff = (Date.now() - new Date(dateStr)) / 1000
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 function AdminApplicantsPage() {
   const navigate = useNavigate()
   const { token, user } = useAuth()
@@ -58,6 +82,11 @@ function AdminApplicantsPage() {
   const [perPage, setPerPage]             = useState(20)
   const [deleteTarget, setDeleteTarget]   = useState(null)   // { id, name }
   const [deleting, setDeleting]           = useState(false)
+  const [selectedIds, setSelectedIds]     = useState([])
+  const [showBulkModal, setShowBulkModal] = useState(false)
+  const [bulkDeleting, setBulkDeleting]   = useState(false)
+  const [openDropdownId, setOpenDropdownId] = useState(null)
+  const [dropdownPos, setDropdownPos]       = useState({ top: 0, left: 0, above: false })
 
   // Advanced filters
   const [showAdvanced, setShowAdvanced]       = useState(false)
@@ -118,9 +147,31 @@ function AdminApplicantsPage() {
     }
   }
 
+  useEffect(() => {
+    if (!openDropdownId) return
+    const close = () => setOpenDropdownId(null)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [openDropdownId])
+
+  const toggleDropdown = (e, applicantId) => {
+    e.stopPropagation()
+    if (openDropdownId === applicantId) { setOpenDropdownId(null); return }
+    const rect = e.currentTarget.getBoundingClientRect()
+    const showAbove = rect.bottom + 340 > window.innerHeight
+    setDropdownPos({
+      top:    showAbove ? null : rect.bottom + 6,
+      bottom: showAbove ? window.innerHeight - rect.top + 6 : null,
+      left:   Math.min(rect.left, window.innerWidth - 210),
+      above:  showAbove,
+    })
+    setOpenDropdownId(applicantId)
+  }
+
   const handleStatusChange = async (applicantId, newStatus, event) => {
     event.stopPropagation()
     if (!canEdit) return
+    setOpenDropdownId(null)
     setUpdatingId(applicantId)
     try {
       const response = await fetch(`${apiBase}/api/applicants/${applicantId}`, {
@@ -162,6 +213,42 @@ function AdminApplicantsPage() {
       setError('Failed to delete applicant.')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const toggleSelect = (id, e) => {
+    e.stopPropagation()
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === applicants.length && applicants.length > 0) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(applicants.map((a) => a.id))
+    }
+  }
+
+  const confirmBulkDelete = async () => {
+    if (!selectedIds.length) return
+    setBulkDeleting(true)
+    try {
+      const res = await fetch(`${apiBase}/api/applicants`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids: selectedIds }),
+      })
+      if (!res.ok) throw new Error()
+      setApplicants((prev) => prev.filter((a) => !selectedIds.includes(a.id)))
+      setSelectedIds([])
+      setShowBulkModal(false)
+    } catch {
+      setError('Failed to delete selected applicants.')
+    } finally {
+      setBulkDeleting(false)
     }
   }
 
@@ -221,6 +308,7 @@ function AdminApplicantsPage() {
 
   useEffect(() => {
     setPage(1)
+    setSelectedIds([])
   }, [searchTerm, statusFilter, positionFilter, startDate, endDate, genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, perPage])
 
   useEffect(() => {
@@ -476,6 +564,18 @@ function AdminApplicantsPage() {
           <table className="admin-table">
             <thead>
               <tr>
+                {canDelete && (
+                  <th style={{ width: '36px' }}>
+                    <input
+                      type="checkbox"
+                      className="bulk-checkbox"
+                      checked={applicants.length > 0 && selectedIds.length === applicants.length}
+                      ref={(el) => { if (el) el.indeterminate = selectedIds.length > 0 && selectedIds.length < applicants.length }}
+                      onChange={toggleSelectAll}
+                      title="Select all on this page"
+                    />
+                  </th>
+                )}
                 <th style={{ width: '40px' }}></th>
                 <th>
                   <button type="button" className="admin-th-sort" onClick={() => handleSort('last_name')}>
@@ -494,7 +594,9 @@ function AdminApplicantsPage() {
                   <button type="button" className="admin-th-sort" onClick={() => handleSort('created_at')}>
                     Submitted {sort === 'created_at' ? (direction === 'asc' ? '▲' : '▼') : <span className="sort-icon">↕</span>}
                   </button>
-                </th>                {canDelete && <th>Actions</th>}              </tr>
+                </th>
+                {canDelete && <th>Actions</th>}
+              </tr>
             </thead>
             <tbody>
               {loading ? (
@@ -518,11 +620,21 @@ function AdminApplicantsPage() {
                 applicants.map((applicant) => (
                   <tr
                     key={applicant.id}
-                    className="admin-table-row-clickable"
+                    className={`admin-table-row-clickable${selectedIds.includes(applicant.id) ? ' row-selected' : ''}`}
                     onClick={() => navigate(`/admin?applicant=${applicant.id}`)}
                   >
+                    {canDelete && (
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="bulk-checkbox"
+                          checked={selectedIds.includes(applicant.id)}
+                          onChange={(e) => toggleSelect(applicant.id, e)}
+                        />
+                      </td>
+                    )}
                     <td>
-                      <div className="admin-table-avatar">
+                      <div className="admin-table-avatar" style={getAvatarColor(applicant.first_name, applicant.last_name)}>
                         {getInitials(applicant.first_name, applicant.last_name)}
                       </div>
                     </td>
@@ -533,24 +645,27 @@ function AdminApplicantsPage() {
                       </div>
                     </td>
                     <td>{applicant.position_applied_for}</td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className={`status-chip-wrap status-${applicant.status}`}>
-                        <span className="status-dot" />
-                        <select
-                          className="status-chip-select"
-                          value={applicant.status}
-                          disabled={!canEdit || updatingId === applicant.id}
-                          onChange={(e) => handleStatusChange(applicant.id, e.target.value, e)}
-                          title={!canEdit ? 'No permission to change status' : 'Change status'}
-                        >
-                          {statusOptions.map((o) => <option key={o} value={o}>{shortStatus(o)}</option>)}
-                        </select>
-                        {updatingId === applicant.id && <span className="status-spinner" />}
-                      </div>
+                    <td onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        className={`status-chip-wrap status-${applicant.status}${updatingId === applicant.id ? ' status-chip-saving' : ''}${!canEdit ? ' status-chip-readonly' : ''}${openDropdownId === applicant.id ? ' status-chip-open' : ''}`}
+                        onClick={(e) => canEdit && !updatingId && toggleDropdown(e, applicant.id)}
+                        disabled={!canEdit || !!updatingId}
+                      >
+                        {updatingId === applicant.id ? (
+                          <><span className="status-spinner" /><span className="status-chip-saving-label">Saving…</span></>
+                        ) : (
+                          <>
+                            <span className="status-dot" />
+                            <span>{shortStatus(applicant.status)}</span>
+                            {canEdit && <svg className={`status-chip-chevron${openDropdownId === applicant.id ? ' open' : ''}`} width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>}
+                          </>
+                        )}
+                      </button>
                     </td>
                     <td className="col-email">{applicant.email_address}</td>
                     <td className="col-contact">{applicant.contact_number}</td>
-                    <td>{new Date(applicant.created_at).toLocaleDateString()}</td>
+                    <td title={new Date(applicant.created_at).toLocaleString()}>{timeAgo(applicant.created_at)}</td>
                     {canDelete && (
                       <td onClick={(e) => e.stopPropagation()}>
                         <button
@@ -568,7 +683,7 @@ function AdminApplicantsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={canDelete ? 9 : 8}>
                     <div className="admin-empty-state">
                       <div className="admin-empty-icon">🔍</div>
                       <p>No applicants found</p>
@@ -606,6 +721,56 @@ function AdminApplicantsPage() {
           </div>
         </div>
       </div>
+      {/* ── Status dropdown (rendered outside table to avoid overflow clipping) ── */}
+      {openDropdownId && (() => {
+        const activeApplicant = applicants.find((a) => a.id === openDropdownId)
+        if (!activeApplicant) return null
+        return (
+          <div
+            className={`status-dropdown${dropdownPos.above ? ' above' : ''}`}
+            style={{
+              top:    dropdownPos.top    != null ? dropdownPos.top    : 'auto',
+              bottom: dropdownPos.bottom != null ? dropdownPos.bottom : 'auto',
+              left:   dropdownPos.left,
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="status-dropdown-header">Set status</div>
+            {statusOptions.map((o) => (
+              <button
+                key={o}
+                type="button"
+                className={`status-dropdown-option status-dd-${o}${activeApplicant.status === o ? ' active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); handleStatusChange(activeApplicant.id, o, e) }}
+              >
+                <span className="status-dropdown-dot" />
+                <span>{formatStatus(o)}</span>
+                {activeApplicant.status === o && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto', flexShrink: 0, opacity: 0.7 }}><polyline points="20 6 9 17 4 12"/></svg>
+                )}
+              </button>
+            ))}
+          </div>
+        )
+      })()}
+      {/* ── Bulk action bar ── */}
+      {canDelete && selectedIds.length > 0 && (
+        <div className="bulk-action-bar">
+          <span className="bulk-action-count">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            {selectedIds.length} selected
+          </span>
+          <div className="bulk-action-btns">
+            <button type="button" className="bulk-action-clear" onClick={() => setSelectedIds([])}>
+              Deselect all
+            </button>
+            <button type="button" className="bulk-action-delete" onClick={() => setShowBulkModal(true)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              Delete {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}
+            </button>
+          </div>
+        </div>
+      )}
       {/* ── Delete confirmation modal ── */}
       {deleteTarget && (
         <div className="del-modal-backdrop" onClick={() => !deleting && setDeleteTarget(null)}>
@@ -636,6 +801,42 @@ function AdminApplicantsPage() {
                   <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Deleting…</>
                 ) : (
                   <>Delete applicant</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Bulk delete confirmation modal ── */}
+      {showBulkModal && (
+        <div className="del-modal-backdrop" onClick={() => !bulkDeleting && setShowBulkModal(false)}>
+          <div className="del-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="del-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </div>
+            <h3 className="del-modal-title">Delete {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}?</h3>
+            <p className="del-modal-body">
+              <strong>{selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}</strong> will be permanently removed from the system, including their CVs and notes. This cannot be undone.
+            </p>
+            <div className="del-modal-actions">
+              <button
+                type="button"
+                className="del-modal-cancel"
+                onClick={() => setShowBulkModal(false)}
+                disabled={bulkDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="del-modal-confirm"
+                onClick={confirmBulkDelete}
+                disabled={bulkDeleting}
+              >
+                {bulkDeleting ? (
+                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Deleting…</>
+                ) : (
+                  <>Delete {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}</>
                 )}
               </button>
             </div>
