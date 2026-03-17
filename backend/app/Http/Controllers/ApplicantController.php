@@ -63,19 +63,27 @@ class ApplicantController extends Controller
         }
 
         if ($request->filled('salary_min')) {
-            $query->where('expected_salary', '>=', $request->numeric('salary_min'));
+            $query->where('expected_salary', '>=', (float) $request->input('salary_min'));
         }
 
         if ($request->filled('salary_max')) {
-            $query->where('expected_salary', '<=', $request->numeric('salary_max'));
+            $query->where('expected_salary', '<=', (float) $request->input('salary_max'));
         }
 
         if ($request->filled('experience_min')) {
-            $query->where('total_work_experience_years', '>=', $request->numeric('experience_min'));
+            $query->where('total_work_experience_years', '>=', (float) $request->input('experience_min'));
         }
 
         if ($request->filled('experience_max')) {
-            $query->where('total_work_experience_years', '<=', $request->numeric('experience_max'));
+            $query->where('total_work_experience_years', '<=', (float) $request->input('experience_max'));
+        }
+
+        if ($request->filled('age_min')) {
+            $query->where('age', '>=', (int) $request->input('age_min'));
+        }
+
+        if ($request->filled('age_max')) {
+            $query->where('age', '<=', (int) $request->input('age_max'));
         }
 
         $startDate = $request->date('start_date');
@@ -90,7 +98,7 @@ class ApplicantController extends Controller
 
         $sort      = $request->input('sort', 'status');
         $direction = $request->input('direction', 'asc');
-        $allowedSorts      = ['created_at', 'last_name', 'first_name', 'status', 'expected_salary', 'total_work_experience_years'];
+        $allowedSorts      = ['created_at', 'last_name', 'first_name', 'status', 'expected_salary', 'total_work_experience_years', 'age'];
         $allowedDirections = ['asc', 'desc'];
 
         if (!in_array($sort, $allowedSorts, true)) {

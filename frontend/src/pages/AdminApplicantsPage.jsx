@@ -62,6 +62,24 @@ const timeAgo = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return 'N/A'
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return 'N/A'
+  return new Date(dateStr).toLocaleString()
+}
+
+const formatCurrency = (value) => {
+  if (value === null || value === undefined || value === '') return 'N/A'
+  const num = Number(value)
+  return Number.isFinite(num) ? `PHP ${num.toLocaleString()}` : String(value)
+}
+
+const safeValue = (value) => value === null || value === undefined || value === '' ? 'N/A' : value
+
 function AdminApplicantsPage() {
   const navigate = useNavigate()
   const { token, user } = useAuth()
@@ -90,6 +108,11 @@ function AdminApplicantsPage() {
   const [bulkDeleting, setBulkDeleting]   = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState(null)
   const [dropdownPos, setDropdownPos]       = useState({ top: 0, left: 0, above: false })
+  const [viewTargetId, setViewTargetId]   = useState(null)
+  const [viewApplicant, setViewApplicant] = useState(null)
+  const [viewNotes, setViewNotes]         = useState([])
+  const [viewLoading, setViewLoading]     = useState(false)
+  const [viewError, setViewError]         = useState(null)
 
   // Advanced filters
   const [showAdvanced, setShowAdvanced]       = useState(false)
@@ -101,8 +124,18 @@ function AdminApplicantsPage() {
   const [salaryMax, setSalaryMax]             = useState('')
   const [experienceMin, setExperienceMin]     = useState('')
   const [experienceMax, setExperienceMax]     = useState('')
+  const [ageRangeFilter, setAgeRangeFilter]   = useState('')
 
-  const advancedFilterCount = [genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax].filter(Boolean).length
+  const AGE_RANGE_BOUNDS = {
+    below_30:   { ageMin: undefined, ageMax: 29 },
+    age_30_45:  { ageMin: 30, ageMax: 45 },
+    age_46_61:  { ageMin: 46, ageMax: 61 },
+    age_61_plus:{ ageMin: 61, ageMax: undefined },
+  }
+
+  const selectedAgeRange = AGE_RANGE_BOUNDS[ageRangeFilter] || { ageMin: undefined, ageMax: undefined }
+
+  const advancedFilterCount = [genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, ageRangeFilter].filter(Boolean).length
   const activeFilterCount = [searchTerm, statusFilter, positionFilter, startDate, endDate].filter(Boolean).length + advancedFilterCount
 
   const handleSort = (field) => {
@@ -157,6 +190,20 @@ function AdminApplicantsPage() {
     return () => document.removeEventListener('mousedown', close)
   }, [openDropdownId])
 
+  useEffect(() => {
+    if (!viewTargetId) return
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setViewTargetId(null)
+        setViewApplicant(null)
+        setViewNotes([])
+        setViewError(null)
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [viewTargetId])
+
   const toggleDropdown = (e, applicantId) => {
     e.stopPropagation()
     if (openDropdownId === applicantId) { setOpenDropdownId(null); return }
@@ -199,6 +246,46 @@ function AdminApplicantsPage() {
   const handleDelete = (applicant, e) => {
     e.stopPropagation()
     setDeleteTarget({ id: applicant.id, name: `${toName(applicant.first_name)} ${toName(applicant.last_name)}` })
+  }
+
+  const closeViewModal = () => {
+    setViewTargetId(null)
+    setViewApplicant(null)
+    setViewNotes([])
+    setViewError(null)
+    setViewLoading(false)
+  }
+
+  const handleView = async (applicantId, e) => {
+    e.stopPropagation()
+    setViewTargetId(applicantId)
+    setViewApplicant(null)
+    setViewNotes([])
+    setViewError(null)
+    setViewLoading(true)
+
+    try {
+      const [applicantRes, notesRes] = await Promise.all([
+        fetch(`${apiBase}/api/applicants/${applicantId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${apiBase}/api/applicants/${applicantId}/notes`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ])
+
+      if (!applicantRes.ok) throw new Error()
+
+      const applicantPayload = await applicantRes.json()
+      const notesPayload = notesRes.ok ? await notesRes.json() : []
+
+      setViewApplicant(applicantPayload)
+      setViewNotes(Array.isArray(notesPayload) ? notesPayload : (notesPayload.data || []))
+    } catch (_) {
+      setViewError('Unable to load applicant details.')
+    } finally {
+      setViewLoading(false)
+    }
   }
 
   const confirmDelete = async () => {
@@ -262,6 +349,9 @@ function AdminApplicantsPage() {
         <td>${toName(a.first_name)} ${toName(a.last_name)}</td>
         <td>${a.email_address}</td>
         <td>${a.contact_number ?? ''}</td>
+        <td>${a.age ?? ''}</td>
+        <td>${a.total_work_experience_years ?? ''}</td>
+        <td>${formatCurrency(a.expected_salary)}</td>
         <td>${a.position_applied_for ?? ''}</td>
         <td>${formatStatus(a.status)}</td>
         <td>${new Date(a.created_at).toLocaleDateString()}</td>
@@ -280,7 +370,7 @@ function AdminApplicantsPage() {
       <h2>Applicants</h2>
       <p>Page ${page} of ${lastPage} &nbsp;·&nbsp; ${total} total &nbsp;·&nbsp; Exported ${new Date().toLocaleString()}</p>
       <table>
-        <thead><tr><th>Name</th><th>Email</th><th>Contact</th><th>Position</th><th>Status</th><th>Submitted</th></tr></thead>
+        <thead><tr><th>Name</th><th>Email</th><th>Contact</th><th>Age</th><th>Experience (yrs)</th><th>Expected Salary</th><th>Position</th><th>Status</th><th>Submitted</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <script>window.onload = () => { window.print(); }<\/script>
@@ -302,6 +392,7 @@ function AdminApplicantsPage() {
     setSalaryMax('')
     setExperienceMin('')
     setExperienceMax('')
+    setAgeRangeFilter('')
   }
 
   useEffect(() => {
@@ -312,7 +403,7 @@ function AdminApplicantsPage() {
   useEffect(() => {
     setPage(1)
     setSelectedIds([])
-  }, [searchTerm, statusFilter, positionFilter, startDate, endDate, genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, perPage])
+  }, [searchTerm, statusFilter, positionFilter, startDate, endDate, genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, ageRangeFilter, perPage])
 
   useEffect(() => {
     if (!token) return
@@ -331,6 +422,8 @@ function AdminApplicantsPage() {
         salary_max: salaryMax || undefined,
         experience_min: experienceMin || undefined,
         experience_max: experienceMax || undefined,
+        age_min: selectedAgeRange.ageMin,
+        age_max: selectedAgeRange.ageMax,
         sort,
         direction,
         page,
@@ -338,7 +431,7 @@ function AdminApplicantsPage() {
       })
     }, 300)
     return () => clearTimeout(timer)
-  }, [token, searchTerm, statusFilter, positionFilter, startDate, endDate, genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, sort, direction, page, perPage])
+  }, [token, searchTerm, statusFilter, positionFilter, startDate, endDate, genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, ageRangeFilter, selectedAgeRange.ageMin, selectedAgeRange.ageMax, sort, direction, page, perPage])
 
   const getGreeting = () => {
     const h = new Date().getHours()
@@ -509,6 +602,16 @@ function AdminApplicantsPage() {
                 />
               </label>
               <label>
+                <span>Age range</span>
+                <select className="select select-bordered" value={ageRangeFilter} onChange={(e) => setAgeRangeFilter(e.target.value)}>
+                  <option value="">Any</option>
+                  <option value="below_30">Below 30</option>
+                  <option value="age_30_45">30-45</option>
+                  <option value="age_46_61">46-61</option>
+                  <option value="age_61_plus">61 and above</option>
+                </select>
+              </label>
+              <label>
                 <span>Min experience (yrs)</span>
                 <input
                   className="input input-bordered"
@@ -596,21 +699,35 @@ function AdminApplicantsPage() {
                     Status {sort === 'status' ? (direction === 'asc' ? '▲' : '▼') : <span className="sort-icon">↕</span>}
                   </button>
                 </th>
-                <th className="col-email">Email</th>
                 <th className="col-contact">Contact</th>
+                <th className="col-age">
+                  <button type="button" className="admin-th-sort" onClick={() => handleSort('age')}>
+                    Age {sort === 'age' ? (direction === 'asc' ? '▲' : '▼') : <span className="sort-icon">↕</span>}
+                  </button>
+                </th>
+                <th className="col-experience">
+                  <button type="button" className="admin-th-sort" onClick={() => handleSort('total_work_experience_years')}>
+                    Experience {sort === 'total_work_experience_years' ? (direction === 'asc' ? '▲' : '▼') : <span className="sort-icon">↕</span>}
+                  </button>
+                </th>
+                <th className="col-salary">
+                  <button type="button" className="admin-th-sort" onClick={() => handleSort('expected_salary')}>
+                    Salary {sort === 'expected_salary' ? (direction === 'asc' ? '▲' : '▼') : <span className="sort-icon">↕</span>}
+                  </button>
+                </th>
                 <th>
                   <button type="button" className="admin-th-sort" onClick={() => handleSort('created_at')}>
                     Submitted {sort === 'created_at' ? (direction === 'asc' ? '▲' : '▼') : <span className="sort-icon">↕</span>}
                   </button>
                 </th>
-                {canDelete && <th>Actions</th>}
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={`skel-${i}`} style={{ opacity: 1 - i * 0.08 }}>
-                    {Array.from({ length: 7 }).map((__, j) => (
+                    {Array.from({ length: canDelete ? 11 : 10 }).map((__, j) => (
                       <td key={j}>
                         <div style={{
                           height: '14px', borderRadius: '6px',
@@ -652,7 +769,7 @@ function AdminApplicantsPage() {
                         <span className="admin-table-email">{applicant.email_address}</span>
                       </div>
                     </td>
-                    <td>{applicant.position_applied_for}</td>
+                    <td title={applicant.position_applied_for}>{applicant.position_applied_for}</td>
                     <td onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
                       <button
                         type="button"
@@ -671,11 +788,23 @@ function AdminApplicantsPage() {
                         )}
                       </button>
                     </td>
-                    <td className="col-email">{applicant.email_address}</td>
                     <td className="col-contact">{applicant.contact_number}</td>
+                    <td className="col-age">{applicant.age ?? '—'}</td>
+                    <td className="col-experience">{applicant.total_work_experience_years != null ? `${applicant.total_work_experience_years} yr` : '—'}</td>
+                    <td className="col-salary">{formatCurrency(applicant.expected_salary)}</td>
                     <td title={new Date(applicant.created_at).toLocaleString()}>{timeAgo(applicant.created_at)}</td>
-                    {canDelete && (
-                      <td onClick={(e) => e.stopPropagation()}>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div className="tbl-action-group">
+                        <button
+                          type="button"
+                          className="tbl-view-btn"
+                          onClick={(e) => handleView(applicant.id, e)}
+                          title="View applicant details"
+                          aria-label="View applicant details"
+                        >
+                          View
+                        </button>
+                        {canDelete && (
                         <button
                           type="button"
                           className="tbl-delete-btn"
@@ -685,13 +814,14 @@ function AdminApplicantsPage() {
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                         </button>
-                      </td>
-                    )}
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={canDelete ? 9 : 8}>
+                  <td colSpan={canDelete ? 11 : 10}>
                     <div className="admin-empty-state">
                       <div className="admin-empty-icon">🔍</div>
                       <p>No applicants found</p>
@@ -792,6 +922,198 @@ function AdminApplicantsPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
               Delete {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}
             </button>
+          </div>
+        </div>
+      )}
+      {viewTargetId && (
+        <div className="avm-backdrop" onClick={() => !viewLoading && closeViewModal()}>
+          <div className="avm" onClick={e => e.stopPropagation()}>
+
+            {/* ── Banner ── */}
+            <div className="avm-banner">
+              <div className="avm-banner-inner">
+                {viewApplicant ? (
+                  <div className="avm-avatar-lg" style={getAvatarColor(viewApplicant.first_name, viewApplicant.last_name)}>
+                    {getInitials(viewApplicant.first_name, viewApplicant.last_name)}
+                  </div>
+                ) : (
+                  <div className="avm-avatar-lg avm-avatar-loading">…</div>
+                )}
+                <div className="avm-banner-text">
+                  <div className="avm-eyebrow">Applicant Profile</div>
+                  <h2 className="avm-name">
+                    {viewApplicant
+                      ? `${toName(viewApplicant.first_name)} ${toName(viewApplicant.last_name)}`
+                      : 'Loading…'}
+                  </h2>
+                  <div className="avm-position">
+                    {viewApplicant ? safeValue(viewApplicant.position_applied_for) : 'Fetching details…'}
+                  </div>
+                </div>
+              </div>
+              <div className="avm-banner-actions">
+                {viewApplicant?.cv_path && (
+                  <a
+                    className="avm-cv-btn"
+                    href={`${apiBase}/api/applicants/${viewApplicant.id}/cv`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    View CV
+                  </a>
+                )}
+                <button className="avm-close-btn" type="button" onClick={closeViewModal} disabled={viewLoading} aria-label="Close">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* ── Body ── */}
+            <div className="avm-body">
+              {viewLoading ? (
+                <div className="avm-loading">
+                  <span className="login-spinner" />
+                  <span>Loading applicant details…</span>
+                </div>
+              ) : viewError ? (
+                <div className="admin-alert error">{viewError}</div>
+              ) : viewApplicant ? (
+                <>
+                  {/* Contact bar */}
+                  <div className="avm-contact-bar">
+                    <div className="avm-contact-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                      <span>{safeValue(viewApplicant.email_address)}</span>
+                    </div>
+                    <div className="avm-contact-divider" />
+                    <div className="avm-contact-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.56a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                      <span>{safeValue(viewApplicant.contact_number)}</span>
+                    </div>
+                    <div className="avm-contact-divider" />
+                    <div className="avm-contact-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      <span>Applied {formatDate(viewApplicant.created_at)}</span>
+                    </div>
+                    <div className="avm-contact-divider" />
+                    <div className="avm-contact-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      <span>{safeValue(viewApplicant.preferred_work_location)}</span>
+                    </div>
+                  </div>
+
+                  {/* KPI strip */}
+                  <div className="avm-kpi-row">
+                    <div className="avm-kpi">
+                      <span className="avm-kpi-label">Experience</span>
+                      <strong className="avm-kpi-value">{safeValue(viewApplicant.total_work_experience_years)} yr(s)</strong>
+                    </div>
+                    <div className="avm-kpi">
+                      <span className="avm-kpi-label">Expected salary</span>
+                      <strong className="avm-kpi-value">{formatCurrency(viewApplicant.expected_salary)}</strong>
+                    </div>
+                    <div className="avm-kpi">
+                      <span className="avm-kpi-label">Education</span>
+                      <strong className="avm-kpi-value">{safeValue(viewApplicant.highest_education_level)}</strong>
+                    </div>
+                    <div className="avm-kpi">
+                      <span className="avm-kpi-label">Vacancy source</span>
+                      <strong className="avm-kpi-value">{safeValue(viewApplicant.vacancy_source)}</strong>
+                    </div>
+                  </div>
+
+                  {/* Detail cards grid */}
+                  <div className="avm-grid">
+                    <div className="avm-card">
+                      <div className="avm-card-head">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        Application
+                      </div>
+                      <div className="avm-pairs">
+                        <div className="avm-pair"><span>Status</span><span className={`admin-chip ${viewApplicant.status} avm-pair-chip`}>{formatStatus(viewApplicant.status)}</span></div>
+                        <div className="avm-pair"><span>Position</span><strong>{safeValue(viewApplicant.position_applied_for)}</strong></div>
+                        <div className="avm-pair"><span>Preferred location</span><strong>{safeValue(viewApplicant.preferred_work_location)}</strong></div>
+                        <div className="avm-pair"><span>Vacancy source</span><strong>{safeValue(viewApplicant.vacancy_source)}</strong></div>
+                      </div>
+                    </div>
+
+                    <div className="avm-card">
+                      <div className="avm-card-head">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Personal
+                      </div>
+                      <div className="avm-pairs">
+                        <div className="avm-pair"><span>Address</span><strong>{safeValue(viewApplicant.permanent_address)}</strong></div>
+                        <div className="avm-pair"><span>Gender</span><strong>{safeValue(viewApplicant.gender)}</strong></div>
+                        <div className="avm-pair"><span>Civil status</span><strong>{safeValue(viewApplicant.civil_status)}</strong></div>
+                        <div className="avm-pair"><span>Birthdate</span><strong>{formatDate(viewApplicant.birthdate)}</strong></div>
+                        <div className="avm-pair"><span>Age</span><strong>{safeValue(viewApplicant.age)}</strong></div>
+                      </div>
+                    </div>
+
+                    <div className="avm-card">
+                      <div className="avm-card-head">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                        Education
+                      </div>
+                      <div className="avm-pairs">
+                        <div className="avm-pair"><span>Highest level</span><strong>{safeValue(viewApplicant.highest_education_level)}</strong></div>
+                        <div className="avm-pair"><span>Course / Degree</span><strong>{safeValue(viewApplicant.bachelors_degree_course)}</strong></div>
+                        <div className="avm-pair"><span>School</span><strong>{safeValue(viewApplicant.last_school_attended)}</strong></div>
+                        <div className="avm-pair"><span>Year graduated</span><strong>{safeValue(viewApplicant.year_graduated)}</strong></div>
+                      </div>
+                    </div>
+
+                    <div className="avm-card">
+                      <div className="avm-card-head">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        Professional
+                      </div>
+                      <div className="avm-pairs">
+                        <div className="avm-pair"><span>PRC license</span><strong>{safeValue(viewApplicant.prc_license)}</strong></div>
+                        <div className="avm-pair"><span>Work experience</span><strong>{safeValue(viewApplicant.total_work_experience_years)} year(s)</strong></div>
+                        <div className="avm-pair"><span>Expected salary</span><strong>{formatCurrency(viewApplicant.expected_salary)}</strong></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* HR Notes */}
+                  <div className="avm-card avm-notes-card">
+                    <div className="avm-card-head">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                      HR Notes
+                      <span className="avm-notes-count">{viewNotes.length}</span>
+                    </div>
+                    {viewNotes.length ? (
+                      <ul className="avm-notes-list">
+                        {viewNotes.map(note => (
+                          <li key={note.id} className="avm-note">
+                            <div className="avm-note-avatar">
+                              {(note.user?.name || 'R')[0].toUpperCase()}
+                            </div>
+                            <div className="avm-note-body">
+                              <div className="avm-note-meta">
+                                <strong>{safeValue(note.user?.name || 'Recruiter')}</strong>
+                                <span>{formatDateTime(note.created_at)}</span>
+                              </div>
+                              <p>{safeValue(note.note)}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="avm-empty">No HR notes on record.</div>
+                    )}
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
       )}
