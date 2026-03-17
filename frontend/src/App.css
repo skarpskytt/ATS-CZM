@@ -1694,6 +1694,12 @@ textarea {
   padding: 0.35rem 0.75rem 0.2rem;
 }
 
+.status-dropdown-divider {
+  height: 1px;
+  margin: 0.2rem 0.5rem;
+  background: rgba(209, 213, 219, 0.8);
+}
+
 .status-dropdown-option {
   display: flex;
   align-items: center;

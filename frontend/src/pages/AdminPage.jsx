@@ -14,6 +14,8 @@ const statusOptions = [
   'rejected',
   'withdrawn',
 ]
+const pipelineStatusOptions = statusOptions.slice(0, 6)
+const terminalStatusOptions = statusOptions.slice(6)
 
 const extractError = async (response) => {
   try {
@@ -592,11 +594,20 @@ function AdminPage() {
                 onChange={(event) => { setPage(1); setStatusFilter(event.target.value) }}
               >
                 <option value="">All statuses</option>
-                {statusOptions.map((option) => (
-                  <option key={`filter-${option}`} value={option}>
-                    {formatStatus(option)}
-                  </option>
-                ))}
+                <optgroup label="Pipeline">
+                  {pipelineStatusOptions.map((option) => (
+                    <option key={`filter-${option}`} value={option}>
+                      {formatStatus(option)}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="End states">
+                  {terminalStatusOptions.map((option) => (
+                    <option key={`filter-${option}`} value={option}>
+                      {formatStatus(option)}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
             <ul className="admin-list">
@@ -689,11 +700,20 @@ function AdminPage() {
                             )
                           }}
                         >
-                          {statusOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {formatStatus(option)}
-                            </option>
-                          ))}
+                          <optgroup label="Pipeline">
+                            {pipelineStatusOptions.map((option) => (
+                              <option key={option} value={option}>
+                                {formatStatus(option)}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="End states">
+                            {terminalStatusOptions.map((option) => (
+                              <option key={option} value={option}>
+                                {formatStatus(option)}
+                              </option>
+                            ))}
+                          </optgroup>
                         </select>
                         <button
                           type="button"

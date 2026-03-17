@@ -14,6 +14,8 @@ const statusOptions = [
   'rejected',
   'withdrawn',
 ]
+const pipelineStatusOptions = statusOptions.slice(0, 6)
+const terminalStatusOptions = statusOptions.slice(6)
 
 const formatStatus = (value) => {
   return value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
@@ -77,8 +79,8 @@ function AdminApplicantsPage() {
   const [lastPage, setLastPage]           = useState(1)
   const [total, setTotal]                 = useState(0)
   const [positions, setPositions]         = useState([])
-  const [sort, setSort]                   = useState('created_at')
-  const [direction, setDirection]         = useState('desc')
+  const [sort, setSort]                   = useState('status')
+  const [direction, setDirection]         = useState('asc')
   const [updatingId, setUpdatingId]       = useState(null)
   const [perPage, setPerPage]             = useState(20)
   const [deleteTarget, setDeleteTarget]   = useState(null)   // { id, name }
@@ -399,7 +401,12 @@ function AdminApplicantsPage() {
             <span>Status</span>
             <select className="select select-bordered" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All statuses</option>
-              {statusOptions.map((o) => <option key={o} value={o}>{formatStatus(o)}</option>)}
+              <optgroup label="Pipeline">
+                {pipelineStatusOptions.map((o) => <option key={o} value={o}>{formatStatus(o)}</option>)}
+              </optgroup>
+              <optgroup label="End states">
+                {terminalStatusOptions.map((o) => <option key={o} value={o}>{formatStatus(o)}</option>)}
+              </optgroup>
             </select>
           </label>
           <label>
@@ -736,8 +743,24 @@ function AdminApplicantsPage() {
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="status-dropdown-header">Set status</div>
-            {statusOptions.map((o) => (
+            <div className="status-dropdown-header">Pipeline</div>
+            {pipelineStatusOptions.map((o) => (
+              <button
+                key={o}
+                type="button"
+                className={`status-dropdown-option status-dd-${o}${activeApplicant.status === o ? ' active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); handleStatusChange(activeApplicant.id, o, e) }}
+              >
+                <span className="status-dropdown-dot" />
+                <span>{formatStatus(o)}</span>
+                {activeApplicant.status === o && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto', flexShrink: 0, opacity: 0.7 }}><polyline points="20 6 9 17 4 12"/></svg>
+                )}
+              </button>
+            ))}
+            <div className="status-dropdown-divider" />
+            <div className="status-dropdown-header">End states</div>
+            {terminalStatusOptions.map((o) => (
               <button
                 key={o}
                 type="button"

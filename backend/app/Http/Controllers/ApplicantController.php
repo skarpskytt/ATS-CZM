@@ -88,17 +88,36 @@ class ApplicantController extends Controller
             $query->whereDate('created_at', '<=', $endDate);
         }
 
-        $sort      = $request->input('sort', 'created_at');
-        $direction = $request->input('direction', 'desc');
+        $sort      = $request->input('sort', 'status');
+        $direction = $request->input('direction', 'asc');
         $allowedSorts      = ['created_at', 'last_name', 'first_name', 'status', 'expected_salary', 'total_work_experience_years'];
         $allowedDirections = ['asc', 'desc'];
 
         if (!in_array($sort, $allowedSorts, true)) {
-            $sort = 'created_at';
+            $sort = 'status';
         }
 
         if (!in_array($direction, $allowedDirections, true)) {
-            $direction = 'desc';
+            $direction = 'asc';
+        }
+
+        if ($sort === 'status') {
+            $statusOrder = "CASE status
+                WHEN 'new' THEN 1
+                WHEN 'reviewed' THEN 2
+                WHEN 'shortlisted' THEN 3
+                WHEN 'interview_scheduled' THEN 4
+                WHEN 'offer_extended' THEN 5
+                WHEN 'hired' THEN 6
+                WHEN 'rejected' THEN 7
+                WHEN 'withdrawn' THEN 8
+                ELSE 9
+            END";
+
+            return $query
+                ->orderByRaw($statusOrder . ' ' . $direction)
+                ->orderBy('created_at', 'desc')
+                ->paginate($request->integer('per_page', 20));
         }
 
         return $query->orderBy($sort, $direction)->paginate($request->integer('per_page', 20));
