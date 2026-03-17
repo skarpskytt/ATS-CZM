@@ -38,7 +38,7 @@ class ApplicantFactory extends Factory
             'preferred_work_location' => $this->faker->city(),
             'cv_path' => null,
             'vacancy_source' => $this->faker->randomElement(['Facebook', 'LinkedIn', 'Referral', 'Website', 'Job Fair']),
-            'status' => $this->faker->randomElement(['submitted', 'under_review', 'shortlisted', 'rejected', 'hired']),
+            'status' => $this->faker->randomElement(['new', 'reviewed', 'shortlisted', 'rejected', 'hired']),
         ];
     }
 }

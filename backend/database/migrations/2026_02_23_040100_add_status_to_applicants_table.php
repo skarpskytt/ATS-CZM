@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('applicants', function (Blueprint $table): void {
-            $table->string('status', 30)->default('submitted')->after('vacancy_source');
+            $table->string('status', 30)->default('new')->after('vacancy_source');
         });
     }
 

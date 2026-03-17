@@ -1728,10 +1728,10 @@ textarea {
 }
 
 /* Dot and text colours per status */
-.status-dd-submitted       { color: #1d4ed8; }
-.status-dd-submitted .status-dropdown-dot       { background: #3b82f6; }
-.status-dd-under_review    { color: #b45309; }
-.status-dd-under_review .status-dropdown-dot    { background: #f59e0b; }
+.status-dd-new       { color: #1d4ed8; }
+.status-dd-new .status-dropdown-dot       { background: #3b82f6; }
+.status-dd-reviewed    { color: #b45309; }
+.status-dd-reviewed .status-dropdown-dot    { background: #f59e0b; }
 .status-dd-shortlisted     { color: #6d28d9; }
 .status-dd-shortlisted .status-dropdown-dot     { background: #8b5cf6; }
 .status-dd-interview_scheduled { color: #0e7490; }
@@ -1756,12 +1756,12 @@ textarea {
 }
 
 /* Per-status colours */
-.status-submitted {
+.status-new {
   background: rgba(59, 130, 246, 0.1);
   color: #1d4ed8;
   border-color: rgba(59, 130, 246, 0.3);
 }
-.status-under_review {
+.status-reviewed {
   background: rgba(245, 158, 11, 0.1);
   color: #b45309;
   border-color: rgba(245, 158, 11, 0.3);
@@ -2260,25 +2260,52 @@ textarea {
   white-space: nowrap;
 }
 
-.admin-chip.shortlisted,
-.admin-chip.hired,
-.admin-chip.interview_scheduled,
+.admin-chip.new {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.admin-chip.reviewed {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.admin-chip.shortlisted {
+  background: rgba(139, 92, 246, 0.15);
+  color: #6d28d9;
+  border-color: rgba(139, 92, 246, 0.35);
+}
+
+.admin-chip.interview_scheduled {
+  background: rgba(6, 182, 212, 0.15);
+  color: #0e7490;
+  border-color: rgba(6, 182, 212, 0.35);
+}
+
 .admin-chip.offer_extended {
-  background: rgba(15, 61, 46, 0.12);
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.admin-chip.hired {
+  background: rgba(15, 61, 46, 0.15);
   color: #0f3d2e;
-  border-color: rgba(15, 61, 46, 0.3);
+  border-color: rgba(15, 61, 46, 0.35);
 }
 
 .admin-chip.withdrawn {
-  background: rgba(120, 120, 120, 0.2);
-  color: #4a4a4a;
-  border-color: rgba(120, 120, 120, 0.35);
+  background: rgba(107, 114, 128, 0.15);
+  color: #374151;
+  border-color: rgba(107, 114, 128, 0.35);
 }
 
 .admin-chip.rejected {
-  background: rgba(255, 122, 122, 0.2);
-  color: #8b1e1e;
-  border-color: rgba(255, 122, 122, 0.4);
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
 .admin-detail {

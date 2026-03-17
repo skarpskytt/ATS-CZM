@@ -5,8 +5,8 @@ import AdminLayout from '../components/AdminLayout'
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const statusOptions = [
-  'submitted',
-  'under_review',
+  'new',
+  'reviewed',
   'shortlisted',
   'interview_scheduled',
   'offer_extended',
@@ -15,12 +15,13 @@ const statusOptions = [
   'withdrawn',
 ]
 
-const formatStatus = (value) =>
-  value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+const formatStatus = (value) => {
+  return value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
 
 const SHORT_STATUS = {
-  submitted:            'New',
-  under_review:         'Review',
+  new:                  'New',
+  reviewed:             'Reviewed',
   shortlisted:          'Shortlist',
   interview_scheduled:  'Interview',
   offer_extended:       'Offer',

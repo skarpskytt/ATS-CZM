@@ -5,8 +5,8 @@ import AdminLayout from '../components/AdminLayout'
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const statusOptions = [
-  'submitted',
-  'under_review',
+  'new',
+  'reviewed',
   'shortlisted',
   'interview_scheduled',
   'offer_extended',
@@ -221,7 +221,9 @@ function AdminPage() {
     }
   }
 
-  const formatStatus = (value) => value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  const formatStatus = (value) => {
+    return value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  }
   const toName = (str) => str ? str.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : ''
 
   const avatarPalettes = [
@@ -298,6 +300,244 @@ function AdminPage() {
     } finally {
       setStatusSaving(false)
     }
+  }
+
+  const handleDownloadApplicantDetails = () => {
+    if (!selectedApplicant) return
+
+    const esc = (value) => String(value ?? 'N/A')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+
+    const fullName = `${toName(selectedApplicant.first_name)} ${toName(selectedApplicant.last_name)}`.trim()
+    const notesHtml = notesLoading
+      ? '<li class="note">Notes are still loading...</li>'
+      : (notes.length
+          ? notes.map((note, idx) => `
+              <li class="note">
+                <div class="note-head">Note ${idx + 1}</div>
+                <p>${esc(note.note)}</p>
+                <div class="note-meta">By ${esc(note.user?.name || 'Recruiter')} · ${esc(new Date(note.created_at).toLocaleString())}</div>
+              </li>
+            `).join('')
+          : '<li class="note">No HR notes available.</li>')
+
+    const win = window.open('', '_blank')
+    if (!win) return
+
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Czark Mak Corporation - Applicant Details</title>
+  <style>
+    :root {
+      --cm-green: #0f3d2e;
+      --cm-green-soft: #1b5d48;
+      --cm-gold: #c8a441;
+      --cm-bg: #f7f5ef;
+      --cm-ink: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      color: var(--cm-ink);
+      background: #fff;
+      padding: 28px;
+    }
+    .sheet {
+      border: 2px solid #d1d5db;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .head {
+      background: linear-gradient(120deg, var(--cm-green), var(--cm-green-soft));
+      color: #fff;
+      padding: 18px 20px;
+      border-bottom: 4px solid var(--cm-gold);
+    }
+    .head h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.02em;
+    }
+    .head p {
+      margin: 4px 0 0;
+      opacity: 0.9;
+      font-size: 12px;
+    }
+    .body { padding: 12px; background: #fff; }
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    .hero h2 { margin: 0 0 2px; color: #111827; font-size: 18px; }
+    .hero .meta { margin: 0; font-size: 11px; color: #6b7280; }
+    .status {
+      align-self: flex-start;
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 9px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .card h3 {
+      margin: 0 0 6px;
+      color: #374151;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 4px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 2px 0;
+      font-size: 11px;
+    }
+    .k { color: #6b7280; }
+    .v { color: #111827; font-weight: 600; text-align: right; }
+    .pro-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .pro-grid .row {
+      flex-direction: column;
+      gap: 2px;
+    }
+    .pro-grid .v {
+      text-align: left;
+    }
+    .notes {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .notes h3 {
+      margin: 0 0 6px;
+      color: #374151;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 4px;
+    }
+    .notes ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 6px;
+    }
+    .note {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 7px 9px;
+      background: #f9fafb;
+      font-size: 11px;
+    }
+    .note-head { font-weight: 700; color: #374151; margin-bottom: 2px; }
+    .note p { margin: 0 0 3px; white-space: pre-wrap; }
+    .note-meta { color: #6b7280; font-size: 10px; }
+    @media print {
+      body { padding: 0; }
+      .sheet { border-radius: 0; }
+      .head {
+        background: linear-gradient(120deg, var(--cm-green), var(--cm-green-soft)) !important;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="head">
+      <h1>Czark Mak Corporation</h1>
+      <p>Applicant Details Report · Generated ${esc(new Date().toLocaleString())}</p>
+    </div>
+    <div class="body">
+      <div class="hero">
+        <div>
+          <h2>${esc(fullName || 'Applicant')}</h2>
+          <p class="meta">Position: ${esc(selectedApplicant.position_applied_for || 'N/A')}</p>
+          <p class="meta">Submitted: ${esc(selectedApplicant.created_at ? new Date(selectedApplicant.created_at).toLocaleString() : 'N/A')}</p>
+        </div>
+        <div class="status">${esc(formatStatus(selectedApplicant.status))}</div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Contact</h3>
+          <div class="row"><span class="k">Email</span><span class="v">${esc(selectedApplicant.email_address)}</span></div>
+          <div class="row"><span class="k">Phone</span><span class="v">${esc(selectedApplicant.contact_number)}</span></div>
+          <div class="row"><span class="k">Address</span><span class="v">${esc(selectedApplicant.permanent_address)}</span></div>
+          <div class="row"><span class="k">Gender</span><span class="v">${esc(selectedApplicant.gender)}</span></div>
+          <div class="row"><span class="k">Civil Status</span><span class="v">${esc(selectedApplicant.civil_status)}</span></div>
+          <div class="row"><span class="k">Birthdate</span><span class="v">${esc(selectedApplicant.birthdate ? new Date(selectedApplicant.birthdate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A')}</span></div>
+          <div class="row"><span class="k">Age</span><span class="v">${esc(selectedApplicant.age)}</span></div>
+        </div>
+
+        <div class="card">
+          <h3>Education</h3>
+          <div class="row"><span class="k">Highest Level</span><span class="v">${esc(selectedApplicant.highest_education_level)}</span></div>
+          <div class="row"><span class="k">Course</span><span class="v">${esc(selectedApplicant.bachelors_degree_course)}</span></div>
+          <div class="row"><span class="k">School</span><span class="v">${esc(selectedApplicant.last_school_attended)}</span></div>
+          <div class="row"><span class="k">Year Graduated</span><span class="v">${esc(selectedApplicant.year_graduated)}</span></div>
+        </div>
+
+        <div class="card" style="grid-column: 1 / -1;">
+          <h3>Professional</h3>
+          <div class="pro-grid">
+            <div class="row"><span class="k">Experience</span><span class="v">${esc(selectedApplicant.total_work_experience_years || 'N/A')} yrs</span></div>
+            <div class="row"><span class="k">Expected Salary</span><span class="v">${esc(selectedApplicant.expected_salary ? `PHP ${Number(selectedApplicant.expected_salary).toLocaleString()}` : 'N/A')}</span></div>
+            <div class="row"><span class="k">Preferred Location</span><span class="v">${esc(selectedApplicant.preferred_work_location)}</span></div>
+            <div class="row"><span class="k">PRC License</span><span class="v">${esc(selectedApplicant.prc_license)}</span></div>
+            <div class="row"><span class="k">Vacancy Source</span><span class="v">${esc(selectedApplicant.vacancy_source)}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes">
+        <h3>HR Notes</h3>
+        <ul>${notesHtml}</ul>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.onload = () => {
+      window.print();
+    };
+  <\/script>
+</body>
+</html>`)
+    win.document.close()
   }
 
   const selectedApplicant = applicants.find((item) => item.id === selectedId)
@@ -465,15 +705,24 @@ function AdminPage() {
                         </button>
                       </div>
                     )}
-                    {canDelete && (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       <button
                         type="button"
-                        className="btn btn-sm btn-error btn-outline"
-                        onClick={() => setDeleteTarget({ id: selectedApplicant.id, name: `${toName(selectedApplicant.first_name)} ${toName(selectedApplicant.last_name)}` })}
+                        className="btn btn-sm btn-outline"
+                        onClick={handleDownloadApplicantDetails}
                       >
-                        Delete Applicant
+                        Download Details
                       </button>
-                    )}
+                      {canDelete && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-error btn-outline"
+                          onClick={() => setDeleteTarget({ id: selectedApplicant.id, name: `${toName(selectedApplicant.first_name)} ${toName(selectedApplicant.last_name)}` })}
+                        >
+                          Delete Applicant
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="admin-detail-grid">

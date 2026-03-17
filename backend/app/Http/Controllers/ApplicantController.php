@@ -256,7 +256,7 @@ class ApplicantController extends Controller
     private function createApplicant(Request $request, bool $sendNotifications): Applicant
     {
         $data = $this->validateApplicant($request);
-        $data['status'] = 'submitted';
+        $data['status'] = 'new';
         $data['age'] = \Carbon\Carbon::parse($data['birthdate'])->age;
 
         if ($request->hasFile('upload_cv')) {
@@ -288,8 +288,8 @@ class ApplicantController extends Controller
     private function allowedStatuses(): array
     {
         return [
-            'submitted',
-            'under_review',
+            'new',
+            'reviewed',
             'shortlisted',
             'interview_scheduled',
             'offer_extended',

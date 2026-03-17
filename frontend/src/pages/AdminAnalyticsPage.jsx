@@ -10,14 +10,14 @@ import {
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 const STATUS_META = {
-  submitted:           { label: 'Submitted',            color: '#c8a441' },
-  under_review:        { label: 'Under Review',         color: '#4a7fbf' },
-  shortlisted:         { label: 'Shortlisted',          color: '#7b5ea7' },
-  interview_scheduled: { label: 'Interview Scheduled',  color: '#2e8b7a' },
-  offer_extended:      { label: 'Offer Extended',       color: '#d4813a' },
-  hired:               { label: 'Hired',                color: '#2d7a3a' },
-  rejected:            { label: 'Rejected',             color: '#b94040' },
-  withdrawn:           { label: 'Withdrawn',            color: '#9ca3af' },
+  new:                 { label: 'New',                  color: '#3b82f6' },
+  reviewed:            { label: 'Reviewed',             color: '#f59e0b' },
+  shortlisted:         { label: 'Shortlisted',          color: '#8b5cf6' },
+  interview_scheduled: { label: 'Interview Scheduled',  color: '#06b6d4' },
+  offer_extended:      { label: 'Offer Extended',       color: '#10b981' },
+  hired:               { label: 'Hired',                color: '#0f3d2e' },
+  rejected:            { label: 'Rejected',             color: '#ef4444' },
+  withdrawn:           { label: 'Withdrawn',            color: '#6b7280' },
 }
 
 const PERIOD_OPTIONS = [
