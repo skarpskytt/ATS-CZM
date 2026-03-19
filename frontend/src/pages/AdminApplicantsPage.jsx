@@ -99,13 +99,20 @@ function AdminApplicantsPage() {
   const [positions, setPositions]         = useState([])
   const [sort, setSort]                   = useState('status')
   const [direction, setDirection]         = useState('asc')
+  const [viewMode, setViewMode]           = useState('active')
   const [updatingId, setUpdatingId]       = useState(null)
   const [perPage, setPerPage]             = useState(20)
   const [deleteTarget, setDeleteTarget]   = useState(null)   // { id, name }
   const [deleting, setDeleting]           = useState(false)
+  const [forceTarget, setForceTarget]     = useState(null)   // { id, name }
+  const [forcing, setForcing]             = useState(false)
   const [selectedIds, setSelectedIds]     = useState([])
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [bulkDeleting, setBulkDeleting]   = useState(false)
+  const [showBulkRestoreModal, setShowBulkRestoreModal] = useState(false)
+  const [bulkRestoring, setBulkRestoring] = useState(false)
+  const [showBulkForceModal, setShowBulkForceModal] = useState(false)
+  const [bulkForcing, setBulkForcing]     = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState(null)
   const [dropdownPos, setDropdownPos]       = useState({ top: 0, left: 0, above: false })
   const [viewTargetId, setViewTargetId]   = useState(null)
@@ -248,6 +255,11 @@ function AdminApplicantsPage() {
     setDeleteTarget({ id: applicant.id, name: `${toName(applicant.first_name)} ${toName(applicant.last_name)}` })
   }
 
+  const handleForceDelete = (applicant, e) => {
+    e.stopPropagation()
+    setForceTarget({ id: applicant.id, name: `${toName(applicant.first_name)} ${toName(applicant.last_name)}` })
+  }
+
   const closeViewModal = () => {
     setViewTargetId(null)
     setViewApplicant(null)
@@ -298,11 +310,46 @@ function AdminApplicantsPage() {
       })
       if (!res.ok) throw new Error()
       setApplicants((prev) => prev.filter((a) => a.id !== deleteTarget.id))
+      setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id))
       setDeleteTarget(null)
     } catch {
-      setError('Failed to delete applicant.')
+      setError('Failed to archive applicant.')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const confirmForceDelete = async () => {
+    if (!forceTarget) return
+    setForcing(true)
+    try {
+      const res = await fetch(`${apiBase}/api/applicants/${forceTarget.id}/force`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error()
+      setApplicants((prev) => prev.filter((a) => a.id !== forceTarget.id))
+      setSelectedIds((prev) => prev.filter((id) => id !== forceTarget.id))
+      setForceTarget(null)
+    } catch {
+      setError('Failed to permanently delete applicant.')
+    } finally {
+      setForcing(false)
+    }
+  }
+
+  const handleRestore = async (applicantId, e) => {
+    e.stopPropagation()
+    try {
+      const res = await fetch(`${apiBase}/api/applicants/${applicantId}/restore`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error()
+      setApplicants((prev) => prev.filter((a) => a.id !== applicantId))
+      setSelectedIds((prev) => prev.filter((id) => id !== applicantId))
+    } catch {
+      setError('Failed to restore applicant.')
     }
   }
 
@@ -336,9 +383,55 @@ function AdminApplicantsPage() {
       setSelectedIds([])
       setShowBulkModal(false)
     } catch {
-      setError('Failed to delete selected applicants.')
+      setError('Failed to archive selected applicants.')
     } finally {
       setBulkDeleting(false)
+    }
+  }
+
+  const confirmBulkRestore = async () => {
+    if (!selectedIds.length) return
+    setBulkRestoring(true)
+    try {
+      const res = await fetch(`${apiBase}/api/applicants/restore`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids: selectedIds }),
+      })
+      if (!res.ok) throw new Error()
+      setApplicants((prev) => prev.filter((a) => !selectedIds.includes(a.id)))
+      setSelectedIds([])
+      setShowBulkRestoreModal(false)
+    } catch {
+      setError('Failed to restore selected applicants.')
+    } finally {
+      setBulkRestoring(false)
+    }
+  }
+
+  const confirmBulkForceDelete = async () => {
+    if (!selectedIds.length) return
+    setBulkForcing(true)
+    try {
+      const res = await fetch(`${apiBase}/api/applicants/force`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids: selectedIds }),
+      })
+      if (!res.ok) throw new Error()
+      setApplicants((prev) => prev.filter((a) => !selectedIds.includes(a.id)))
+      setSelectedIds([])
+      setShowBulkForceModal(false)
+    } catch {
+      setError('Failed to permanently delete selected applicants.')
+    } finally {
+      setBulkForcing(false)
     }
   }
 
@@ -403,7 +496,7 @@ function AdminApplicantsPage() {
   useEffect(() => {
     setPage(1)
     setSelectedIds([])
-  }, [searchTerm, statusFilter, positionFilter, startDate, endDate, genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, ageRangeFilter, perPage])
+  }, [searchTerm, statusFilter, positionFilter, startDate, endDate, genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, ageRangeFilter, perPage, viewMode])
 
   useEffect(() => {
     if (!token) return
@@ -424,6 +517,7 @@ function AdminApplicantsPage() {
         experience_max: experienceMax || undefined,
         age_min: selectedAgeRange.ageMin,
         age_max: selectedAgeRange.ageMax,
+        archived: viewMode === 'archived' ? 'only' : undefined,
         sort,
         direction,
         page,
@@ -431,7 +525,7 @@ function AdminApplicantsPage() {
       })
     }, 300)
     return () => clearTimeout(timer)
-  }, [token, searchTerm, statusFilter, positionFilter, startDate, endDate, genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, ageRangeFilter, selectedAgeRange.ageMin, selectedAgeRange.ageMax, sort, direction, page, perPage])
+  }, [token, searchTerm, statusFilter, positionFilter, startDate, endDate, genderFilter, educationFilter, vacancyFilter, locationFilter, salaryMin, salaryMax, experienceMin, experienceMax, ageRangeFilter, selectedAgeRange.ageMin, selectedAgeRange.ageMax, viewMode, sort, direction, page, perPage])
 
   const getGreeting = () => {
     const h = new Date().getHours()
@@ -452,22 +546,48 @@ function AdminApplicantsPage() {
       <div className="admin-welcome">
         <div className="admin-welcome-text">
           <h2>{getGreeting()}, {user?.name?.split(' ')[0] || 'there'} 👋</h2>
-          <p>You have <strong>{total}</strong> applicant{total !== 1 ? 's' : ''} in the system.</p>
+          <p>
+            You have <strong>{total}</strong> {viewMode === 'archived' ? 'archived ' : ''}
+            applicant{total !== 1 ? 's' : ''} in the system.
+          </p>
         </div>
         <span className="admin-welcome-date">{todayLabel}</span>
       </div>
 
-      <div className="admin-card">
+      <div className={`admin-card admin-card-mode-${viewMode}`}>
         <div className="admin-card-head">
           <div>
-            <h2>All applicants</h2>
+            <h2>{viewMode === 'archived' ? 'Archived applicants' : 'Active applicants'}</h2>
             <p>
               {total > 0
                 ? `Showing ${firstItem}–${lastItem} of ${total} applicant${total !== 1 ? 's' : ''}`
-                : 'No applicants found'}
+                : `No ${viewMode} applicants found`}
             </p>
+            <span className={`admin-mode-pill admin-mode-pill-${viewMode}`}>
+              {viewMode === 'archived' ? 'Archive View' : 'Active View'}
+            </span>
           </div>
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+            <div className="admin-mode-switch" role="tablist" aria-label="Applicant list mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === 'active'}
+                className={`admin-mode-switch-btn ${viewMode === 'active' ? 'is-active is-active-mode' : ''}`}
+                onClick={() => setViewMode('active')}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === 'archived'}
+                className={`admin-mode-switch-btn ${viewMode === 'archived' ? 'is-active is-archived-mode' : ''}`}
+                onClick={() => setViewMode('archived')}
+              >
+                Archived
+              </button>
+            </div>
             {activeFilterCount > 0 && (
               <button type="button" className="btn btn-sm btn-ghost" onClick={clearFilters}>
                 Clear {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}  ✕
@@ -746,7 +866,11 @@ function AdminApplicantsPage() {
                   <tr
                     key={applicant.id}
                     className={`admin-table-row-clickable${selectedIds.includes(applicant.id) ? ' row-selected' : ''}`}
-                    onClick={() => navigate(`/admin?applicant=${applicant.id}`)}
+                    onClick={() => {
+                      if (viewMode === 'active') {
+                        navigate(`/admin?applicant=${applicant.id}`)
+                      }
+                    }}
                   >
                     {canDelete && (
                       <td onClick={(e) => e.stopPropagation()}>
@@ -773,9 +897,9 @@ function AdminApplicantsPage() {
                     <td onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
                       <button
                         type="button"
-                        className={`status-chip-wrap status-${applicant.status}${updatingId === applicant.id ? ' status-chip-saving' : ''}${!canEdit ? ' status-chip-readonly' : ''}${openDropdownId === applicant.id ? ' status-chip-open' : ''}`}
-                        onClick={(e) => canEdit && !updatingId && toggleDropdown(e, applicant.id)}
-                        disabled={!canEdit || !!updatingId}
+                        className={`status-chip-wrap status-${applicant.status}${updatingId === applicant.id ? ' status-chip-saving' : ''}${(!canEdit || viewMode === 'archived') ? ' status-chip-readonly' : ''}${openDropdownId === applicant.id ? ' status-chip-open' : ''}`}
+                        onClick={(e) => canEdit && viewMode === 'active' && !updatingId && toggleDropdown(e, applicant.id)}
+                        disabled={!canEdit || viewMode === 'archived' || !!updatingId}
                       >
                         {updatingId === applicant.id ? (
                           <><span className="status-spinner" /><span className="status-chip-saving-label">Saving…</span></>
@@ -783,7 +907,7 @@ function AdminApplicantsPage() {
                           <>
                             <span className="status-dot" />
                             <span>{shortStatus(applicant.status)}</span>
-                            {canEdit && <svg className={`status-chip-chevron${openDropdownId === applicant.id ? ' open' : ''}`} width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>}
+                            {canEdit && viewMode === 'active' && <svg className={`status-chip-chevron${openDropdownId === applicant.id ? ' open' : ''}`} width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>}
                           </>
                         )}
                       </button>
@@ -795,25 +919,54 @@ function AdminApplicantsPage() {
                     <td title={new Date(applicant.created_at).toLocaleString()}>{timeAgo(applicant.created_at)}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="tbl-action-group">
-                        <button
-                          type="button"
-                          className="tbl-view-btn"
-                          onClick={(e) => handleView(applicant.id, e)}
-                          title="View applicant details"
-                          aria-label="View applicant details"
-                        >
-                          View
-                        </button>
-                        {canDelete && (
-                        <button
-                          type="button"
-                          className="tbl-delete-btn"
-                          onClick={(e) => handleDelete(applicant, e)}
-                          title="Delete applicant"
-                          aria-label="Delete applicant"
-                        >
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                        </button>
+                        {viewMode === 'active' ? (
+                          <>
+                            <button
+                              type="button"
+                              className="tbl-view-btn"
+                              onClick={(e) => handleView(applicant.id, e)}
+                              title="View applicant details"
+                              aria-label="View applicant details"
+                            >
+                              View
+                            </button>
+                            {canDelete && (
+                              <button
+                                type="button"
+                                className="tbl-delete-btn"
+                                onClick={(e) => handleDelete(applicant, e)}
+                                title="Archive applicant"
+                                aria-label="Archive applicant"
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {canDelete && (
+                              <button
+                                type="button"
+                                className="tbl-view-btn"
+                                onClick={(e) => handleRestore(applicant.id, e)}
+                                title="Restore applicant"
+                                aria-label="Restore applicant"
+                              >
+                                Restore
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                type="button"
+                                className="tbl-delete-btn"
+                                onClick={(e) => handleForceDelete(applicant, e)}
+                                title="Delete permanently"
+                                aria-label="Delete permanently"
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
@@ -918,10 +1071,21 @@ function AdminApplicantsPage() {
             <button type="button" className="bulk-action-clear" onClick={() => setSelectedIds([])}>
               Deselect all
             </button>
-            <button type="button" className="bulk-action-delete" onClick={() => setShowBulkModal(true)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-              Delete {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}
-            </button>
+            {viewMode === 'active' ? (
+              <button type="button" className="bulk-action-delete" onClick={() => setShowBulkModal(true)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                Archive {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}
+              </button>
+            ) : (
+              <>
+                <button type="button" className="bulk-action-delete" onClick={() => setShowBulkRestoreModal(true)}>
+                  Restore {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}
+                </button>
+                <button type="button" className="bulk-action-delete" onClick={() => setShowBulkForceModal(true)}>
+                  Delete permanently
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1117,16 +1281,16 @@ function AdminApplicantsPage() {
           </div>
         </div>
       )}
-      {/* ── Delete confirmation modal ── */}
+      {/* ── Archive confirmation modal ── */}
       {deleteTarget && (
         <div className="del-modal-backdrop" onClick={() => !deleting && setDeleteTarget(null)}>
           <div className="del-modal" onClick={(e) => e.stopPropagation()}>
             <div className="del-modal-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
-            <h3 className="del-modal-title">Delete applicant?</h3>
+            <h3 className="del-modal-title">Archive applicant?</h3>
             <p className="del-modal-body">
-              <strong>{deleteTarget.name}</strong> will be permanently removed from the system. This action cannot be undone.
+              <strong>{deleteTarget.name}</strong> will be moved to archive and hidden from active applicants.
             </p>
             <div className="del-modal-actions">
               <button
@@ -1144,25 +1308,60 @@ function AdminApplicantsPage() {
                 disabled={deleting}
               >
                 {deleting ? (
-                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Deleting…</>
+                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Archiving…</>
                 ) : (
-                  <>Delete applicant</>
+                  <>Archive applicant</>
                 )}
               </button>
             </div>
           </div>
         </div>
       )}
-      {/* ── Bulk delete confirmation modal ── */}
+      {forceTarget && (
+        <div className="del-modal-backdrop" onClick={() => !forcing && setForceTarget(null)}>
+          <div className="del-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="del-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </div>
+            <h3 className="del-modal-title">Delete permanently?</h3>
+            <p className="del-modal-body">
+              <strong>{forceTarget.name}</strong> will be permanently removed from the system, including CV files and notes. This cannot be undone.
+            </p>
+            <div className="del-modal-actions">
+              <button
+                type="button"
+                className="del-modal-cancel"
+                onClick={() => setForceTarget(null)}
+                disabled={forcing}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="del-modal-confirm"
+                onClick={confirmForceDelete}
+                disabled={forcing}
+              >
+                {forcing ? (
+                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Deleting…</>
+                ) : (
+                  <>Delete permanently</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Bulk archive confirmation modal ── */}
       {showBulkModal && (
         <div className="del-modal-backdrop" onClick={() => !bulkDeleting && setShowBulkModal(false)}>
           <div className="del-modal" onClick={(e) => e.stopPropagation()}>
             <div className="del-modal-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
-            <h3 className="del-modal-title">Delete {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}?</h3>
+            <h3 className="del-modal-title">Archive {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}?</h3>
             <p className="del-modal-body">
-              <strong>{selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}</strong> will be permanently removed from the system, including their CVs and notes. This cannot be undone.
+              <strong>{selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}</strong> will be moved to archive and hidden from active applicants.
             </p>
             <div className="del-modal-actions">
               <button
@@ -1180,9 +1379,79 @@ function AdminApplicantsPage() {
                 disabled={bulkDeleting}
               >
                 {bulkDeleting ? (
+                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Archiving…</>
+                ) : (
+                  <>Archive {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showBulkRestoreModal && (
+        <div className="del-modal-backdrop" onClick={() => !bulkRestoring && setShowBulkRestoreModal(false)}>
+          <div className="del-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="del-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h3 className="del-modal-title">Restore {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}?</h3>
+            <p className="del-modal-body">
+              <strong>{selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}</strong> will be restored to the active list.
+            </p>
+            <div className="del-modal-actions">
+              <button
+                type="button"
+                className="del-modal-cancel"
+                onClick={() => setShowBulkRestoreModal(false)}
+                disabled={bulkRestoring}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="del-modal-confirm"
+                onClick={confirmBulkRestore}
+                disabled={bulkRestoring}
+              >
+                {bulkRestoring ? (
+                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Restoring…</>
+                ) : (
+                  <>Restore applicants</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showBulkForceModal && (
+        <div className="del-modal-backdrop" onClick={() => !bulkForcing && setShowBulkForceModal(false)}>
+          <div className="del-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="del-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </div>
+            <h3 className="del-modal-title">Delete {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''} permanently?</h3>
+            <p className="del-modal-body">
+              <strong>{selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}</strong> will be permanently removed from the system, including their CV files and notes. This cannot be undone.
+            </p>
+            <div className="del-modal-actions">
+              <button
+                type="button"
+                className="del-modal-cancel"
+                onClick={() => setShowBulkForceModal(false)}
+                disabled={bulkForcing}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="del-modal-confirm"
+                onClick={confirmBulkForceDelete}
+                disabled={bulkForcing}
+              >
+                {bulkForcing ? (
                   <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Deleting…</>
                 ) : (
-                  <>Delete {selectedIds.length} applicant{selectedIds.length !== 1 ? 's' : ''}</>
+                  <>Delete permanently</>
                 )}
               </button>
             </div>

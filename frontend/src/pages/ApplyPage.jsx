@@ -67,6 +67,14 @@ const civilStatusOptions = [
   { value: 'Divorced', label: 'Divorced (foreign national)' },
 ]
 
+const formSteps = [
+  { id: 1, title: 'Resume' },
+  { id: 2, title: 'Identity' },
+  { id: 3, title: 'Education' },
+  { id: 4, title: 'Contact' },
+  { id: 5, title: 'Review' },
+]
+
 const extractError = async (response) => {
   try {
     const payload = await response.json()
@@ -99,6 +107,85 @@ function ApplyPage() {
   const [positionsError, setPositionsError] = useState(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsModalOpen, setTermsModalOpen] = useState(false)
+  const [honeypotWebsite, setHoneypotWebsite] = useState('')
+  const [formStartedAt, setFormStartedAt] = useState(() => Date.now())
+  const [currentStep, setCurrentStep] = useState(1)
+  const [furthestStepReached, setFurthestStepReached] = useState(1)
+
+  const totalSteps = formSteps.length
+  const progressPercent = Math.round((currentStep / totalSteps) * 100)
+
+  const validateStep = (step) => {
+    if (step === 1 && !cvFile) {
+      setError('Please upload your resume first to continue.')
+      return false
+    }
+
+    const requiredByStep = {
+      2: [
+        'position_applied_for',
+        'last_name',
+        'first_name',
+        'permanent_address',
+        'gender',
+        'civil_status',
+        'birthdate',
+      ],
+      3: ['highest_education_level', 'last_school_attended'],
+      4: ['contact_number', 'email_address', 'preferred_work_location'],
+    }
+
+    if (!requiredByStep[step]) {
+      return true
+    }
+
+    const missingField = requiredByStep[step].find((field) => !String(form[field] ?? '').trim())
+    if (missingField) {
+      setError('Please complete all required fields before proceeding to the next step.')
+      return false
+    }
+
+    if (step === 2 && form.gender === 'Other' && !customGender.trim()) {
+      setError('Please specify your gender to continue.')
+      return false
+    }
+
+    return true
+  }
+
+  const goNextStep = () => {
+    setMessage(null)
+    if (!validateStep(currentStep)) {
+      return
+    }
+
+    setError(null)
+    setCurrentStep((previous) => {
+      const nextStep = Math.min(previous + 1, totalSteps)
+      setFurthestStepReached((furthest) => Math.max(furthest, nextStep))
+      return nextStep
+    })
+  }
+
+  const goPreviousStep = () => {
+    setMessage(null)
+    setError(null)
+    setCurrentStep((previous) => Math.max(previous - 1, 1))
+  }
+
+  const goToStep = (step) => {
+    if (submitting) {
+      return
+    }
+
+    if (step > furthestStepReached) {
+      return
+    }
+
+    setMessage(null)
+    setError(null)
+    setCurrentStep(step)
+  }
 
 
   const handleChange = (event) => {
@@ -109,6 +196,7 @@ function ApplyPage() {
   const handleFileChange = (event) => {
     const [file] = event.target.files
     setCvFile(file || null)
+    setError(null)
   }
 
   const buildFormData = () => {
@@ -129,6 +217,9 @@ function ApplyPage() {
     if (cvFile) {
       formData.append('upload_cv', cvFile)
     }
+
+    formData.append('website', honeypotWebsite)
+    formData.append('form_started_at', String(formStartedAt))
 
     return formData
   }
@@ -172,6 +263,18 @@ function ApplyPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!message) return
+    const timer = setTimeout(() => setMessage(null), 4000)
+    return () => clearTimeout(timer)
+  }, [message])
+
+  useEffect(() => {
+    if (!error) return
+    const timer = setTimeout(() => setError(null), 5000)
+    return () => clearTimeout(timer)
+  }, [error])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setSubmitting(true)
@@ -202,12 +305,27 @@ function ApplyPage() {
       setCustomGender('')
       setCustomVacancySource('')
       setCvFile(null)
+      setHoneypotWebsite('')
+      setFormStartedAt(Date.now())
+      setTermsAccepted(false)
+      setCurrentStep(1)
+      setFurthestStepReached(1)
     } catch (err) {
       setError('Network error. Please try again in a moment.')
     } finally {
       setSubmitting(false)
     }
   }
+
+  const displayValue = (value) => {
+    const text = String(value ?? '').trim()
+    return text !== '' ? text : 'Not provided'
+  }
+
+  const resolvedGender = form.gender === 'Other' ? (customGender.trim() || 'Other') : form.gender
+  const resolvedVacancySource = form.vacancy_source === 'Other'
+    ? (customVacancySource.trim() || 'Other')
+    : form.vacancy_source
 
   return (
     <>
@@ -218,7 +336,20 @@ function ApplyPage() {
         <div className="apply-hero-inner">
           <div className="apply-hero-copy">
             <p className="apply-kicker">CZARK MAK CORPORATION</p>
-            <h1 className="apply-title">Apply with confidence.</h1>
+            <h1 className="apply-title apply-title-rotate">
+              <span className="apply-title-prefix">Apply for</span>
+              <span className="apply-rotator" aria-label="Rotating career keywords">
+                <span className="apply-rotator-track">
+                  <span>Careers</span>
+                  <span>Growth</span>
+                  <span>Success</span>
+                  <span>Vision</span>
+                  <span>Future</span>
+                  <span>CZM</span>
+                  <span>Careers</span>
+                </span>
+              </span>
+            </h1>
             <p className="apply-lead">
               Submit your details and CV. Our recruiters will review your application and update you through email.
             </p>
@@ -228,25 +359,27 @@ function ApplyPage() {
               <span className="apply-pill">Email updates</span>
             </div>
           </div>
-          <div className="card apply-hero-card">
-            <div className="card-body gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-[#1c1a16]">What you need</h2>
-                <p className="text-sm text-[#6b5f49]">Bring these details to complete your submission.</p>
-              </div>
-              <ul className="apply-checklist">
-                <li><span />Personal and contact details</li>
-                <li><span />Education background</li>
-                <li><span />Work experience summary</li>
-                <li><span />Latest CV (PDF, DOC, DOCX)</li>
-              </ul>
-              <div className="apply-note">Fields marked with * are required</div>
-            </div>
+          <div className="apply-hero-logo-only" aria-label="Czark Mak logo">
+            <img
+              src="/LOGO_CZM_MAIN%20LOGO_02.jpg"
+              alt="Czark Mak Corporation"
+              className="apply-hero-logo-img"
+            />
           </div>
         </div>
       </section>
 
       <form className="apply-form" onSubmit={handleSubmit} encType="multipart/form-data">
+        <input
+          type="text"
+          name="website"
+          value={honeypotWebsite}
+          onChange={(event) => setHoneypotWebsite(event.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          style={{ position: 'absolute', left: '-10000px', opacity: 0, height: 0, width: 0 }}
+        />
         <div className="card apply-card">
           <div className="card-body apply-card-body">
             <div className="apply-form-header">
@@ -256,6 +389,49 @@ function ApplyPage() {
               </div>
             </div>
 
+            <div className="apply-progress" aria-label="Application form progress">
+              <div className="apply-progress-meta">
+                <span>Step {currentStep} of {totalSteps}</span>
+                <span>{progressPercent}% Complete</span>
+              </div>
+              <div className="apply-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
+                <span className="apply-progress-fill" style={{ width: `${progressPercent}%` }} />
+              </div>
+              <div className="apply-progress-steps">
+                {formSteps.map((step) => (
+                  <button
+                    key={step.id}
+                    type="button"
+                    className={`apply-progress-step${step.id === currentStep ? ' is-active' : ''}${step.id < currentStep ? ' is-complete' : ''}`}
+                    onClick={() => goToStep(step.id)}
+                    disabled={step.id > furthestStepReached || submitting}
+                  >
+                    <span>{step.id}</span>
+                    <small>{step.title}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {currentStep === 1 ? (
+            <div className="form-section" style={{ '--delay': '0ms' }}>
+              <div className="divider apply-divider">Resume</div>
+              <div className="resume-first-card">
+                <p className="resume-first-title">Upload your resume to get started</p>
+                <p className="resume-first-subtitle">We will attach your resume to your application. Complete the details manually in the next steps.</p>
+                <input
+                  className="file-input file-input-bordered file-input-lg w-full bg-white transition-all duration-200 ease-out hover:-translate-y-0.5 focus:-translate-y-0.5 focus:shadow-lg"
+                  type="file"
+                  name="upload_cv"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleFileChange}
+                />
+                {cvFile ? <p className="resume-file-pill">Attached: {cvFile.name}</p> : <p className="resume-file-help">Accepted format: PDF, DOC, DOCX</p>}
+              </div>
+            </div>
+            ) : null}
+
+            {currentStep === 2 ? (
             <div className="form-section" style={{ '--delay': '0ms' }}>
               <div className="divider apply-divider">Position &amp; Identity</div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -391,7 +567,9 @@ function ApplyPage() {
 
               </div>
             </div>
+            ) : null}
 
+            {currentStep === 3 ? (
             <div className="form-section" style={{ '--delay': '80ms' }}>
               <div className="divider apply-divider">Education</div>
               <div className="grid gap-4 lg:grid-cols-2">
@@ -474,7 +652,9 @@ function ApplyPage() {
               </div>
               </div>
             </div>
+            ) : null}
 
+            {currentStep === 4 ? (
             <div className="form-section" style={{ '--delay': '160ms' }}>
               <div className="divider apply-divider">Contact</div>
               <div className="grid gap-4 lg:grid-cols-2">
@@ -520,19 +700,7 @@ function ApplyPage() {
                   required
                 />
               </div>
-              </div>
-            </div>
-
-            <div className="form-section" style={{ '--delay': '240ms' }}>
-              <div className="divider apply-divider">Documents</div>
-              <div className="grid gap-4 lg:grid-cols-2">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Upload CV</span>
-                </label>
-                <input className="file-input file-input-bordered file-input-lg w-full bg-white transition-all duration-200 ease-out hover:-translate-y-0.5 focus:-translate-y-0.5 focus:shadow-lg" type="file" name="upload_cv" accept=".pdf,.doc,.docx" onChange={handleFileChange} />
-              </div>
-              <div className="form-control">
+              <div className="form-control lg:col-span-2">
                 <label className="label">
                   <span className="label-text">Where did you learn about this vacancy?</span>
                 </label>
@@ -561,8 +729,36 @@ function ApplyPage() {
               </div>
               </div>
             </div>
+            ) : null}
 
-            <div className="form-section" style={{ '--delay': '320ms' }}>
+            {currentStep === 5 ? (
+            <div className="form-section" style={{ '--delay': '240ms' }}>
+              <div className="divider apply-divider">Review</div>
+              <div className="review-grid">
+                <div className="review-item"><strong>Resume</strong><span>{cvFile ? cvFile.name : 'Not uploaded'}</span></div>
+                <div className="review-item"><strong>Position</strong><span>{displayValue(form.position_applied_for)}</span></div>
+                <div className="review-item"><strong>Last name</strong><span>{displayValue(form.last_name)}</span></div>
+                <div className="review-item"><strong>First name</strong><span>{displayValue(form.first_name)}</span></div>
+                <div className="review-item"><strong>Middle name</strong><span>{displayValue(form.middle_name)}</span></div>
+                <div className="review-item"><strong>Gender</strong><span>{displayValue(resolvedGender)}</span></div>
+                <div className="review-item"><strong>Civil status</strong><span>{displayValue(form.civil_status)}</span></div>
+                <div className="review-item"><strong>Birthdate</strong><span>{displayValue(form.birthdate)}</span></div>
+                <div className="review-item review-item-full"><strong>Permanent address</strong><span>{displayValue(form.permanent_address)}</span></div>
+
+                <div className="review-item"><strong>Highest education</strong><span>{displayValue(form.highest_education_level)}</span></div>
+                <div className="review-item"><strong>Degree course</strong><span>{displayValue(form.bachelors_degree_course)}</span></div>
+                <div className="review-item"><strong>Year graduated</strong><span>{displayValue(form.year_graduated)}</span></div>
+                <div className="review-item"><strong>Last school</strong><span>{displayValue(form.last_school_attended)}</span></div>
+                <div className="review-item"><strong>PRC license</strong><span>{displayValue(form.prc_license)}</span></div>
+                <div className="review-item"><strong>Work experience</strong><span>{displayValue(form.total_work_experience_years)}</span></div>
+
+                <div className="review-item"><strong>Contact number</strong><span>{displayValue(form.contact_number)}</span></div>
+                <div className="review-item"><strong>Email address</strong><span>{displayValue(form.email_address)}</span></div>
+                <div className="review-item"><strong>Expected salary</strong><span>{displayValue(form.expected_salary)}</span></div>
+                <div className="review-item"><strong>Preferred location</strong><span>{displayValue(form.preferred_work_location)}</span></div>
+                <div className="review-item review-item-full"><strong>Vacancy source</strong><span>{displayValue(resolvedVacancySource)}</span></div>
+              </div>
+
               <div className="divider apply-divider">Terms &amp; Conditions</div>
               <div className="terms-shell">
                 <div className="terms-agreement-card">
@@ -619,28 +815,52 @@ function ApplyPage() {
                 </div>
               </div>
             </div>
+            ) : null}
 
             <div className="form-section" style={{ '--delay': '400ms' }}>
-              <div className="flex flex-col items-center gap-4">
-              <button type="submit" disabled={submitting} className={`btn btn-lg btn-wide apply-submit${submitting ? ' apply-submit--loading' : ''}`}>
-                {submitting ? (
-                  <span className="apply-submit-loading-content">
-                    <svg className="apply-submit-spinner" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="42 14" />
-                    </svg>
-                    Submitting your application…
-                  </span>
+              <div className="apply-step-actions">
+                <button
+                  type="button"
+                  className="btn btn-lg apply-step-btn apply-step-btn-secondary"
+                  onClick={goPreviousStep}
+                  disabled={currentStep === 1 || submitting}
+                >
+                  Back
+                </button>
+
+                {currentStep < totalSteps ? (
+                  <button
+                    type="button"
+                    className="btn btn-lg apply-step-btn apply-step-btn-primary"
+                    onClick={goNextStep}
+                    disabled={submitting}
+                  >
+                    Continue
+                  </button>
                 ) : (
-                  'Submit Application'
+                  <button type="submit" disabled={submitting} className={`btn btn-lg apply-step-btn apply-submit${submitting ? ' apply-submit--loading' : ''}`}>
+                    {submitting ? (
+                      <span className="apply-submit-loading-content">
+                        <svg className="apply-submit-spinner" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="42 14" />
+                        </svg>
+                        Submitting your application...
+                      </span>
+                    ) : (
+                      'Submit Application'
+                    )}
+                  </button>
                 )}
-              </button>
+              </div>
+
+              <div className="apply-form-feedback">
               {message ? (
-                <div className="alert alert-success" role="alert">
+                <div className="alert alert-success apply-form-alert" role="alert">
                   <span>{message}</span>
                 </div>
               ) : null}
               {error ? (
-                <div className="alert alert-error" role="alert">
+                <div className="alert alert-error apply-form-alert" role="alert">
                   <span>{error}</span>
                 </div>
               ) : null}

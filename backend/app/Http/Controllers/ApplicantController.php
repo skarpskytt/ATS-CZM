@@ -9,6 +9,7 @@ use App\Notifications\ApplicantStatusUpdated;
 use App\Notifications\ApplicantSubmitted;
 use App\Notifications\ApplicantSubmissionReceived;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -18,6 +19,13 @@ class ApplicantController extends Controller
     public function index(Request $request)
     {
         $query = Applicant::query();
+
+        $archivedMode = (string) $request->input('archived', 'exclude');
+        if ($archivedMode === 'only') {
+            $query->onlyTrashed();
+        } elseif ($archivedMode === 'with') {
+            $query->withTrashed();
+        }
 
         if ($request->filled('search')) {
             $search = $request->string('search');
@@ -144,6 +152,11 @@ class ApplicantController extends Controller
 
     public function storePublic(Request $request)
     {
+        $antiSpamResponse = $this->runPublicAntiSpamChecks($request);
+        if ($antiSpamResponse !== null) {
+            return $antiSpamResponse;
+        }
+
         $applicant = $this->createApplicant($request, true);
 
         return response()->json($applicant, 201);
@@ -194,14 +207,10 @@ class ApplicantController extends Controller
         $fullName = $applicant->last_name . ', ' . $applicant->first_name;
         $applicantId = $applicant->id;
 
-        if ($applicant->cv_path) {
-            Storage::disk('public')->delete($applicant->cv_path);
-        }
-
         $applicant->delete();
 
-        AuditLog::log('delete', 'applicant', $applicantId, $fullName,
-            "Deleted applicant '{$fullName}'");
+        AuditLog::log('archive', 'applicant', $applicantId, $fullName,
+            "Archived applicant '{$fullName}'");
 
         return response()->noContent();
     }
@@ -216,20 +225,102 @@ class ApplicantController extends Controller
         $applicants = Applicant::whereIn('id', $request->input('ids'))->get();
 
         foreach ($applicants as $applicant) {
+            $fullName = $applicant->last_name . ', ' . $applicant->first_name;
+            $applicant->delete();
+            AuditLog::log('archive', 'applicant', $applicant->id, $fullName,
+                "Bulk-archived applicant '{$fullName}'");
+        }
+
+        return response()->json(['archived' => $applicants->count()]);
+    }
+
+    public function restore(int $applicantId)
+    {
+        $applicant = Applicant::onlyTrashed()->findOrFail($applicantId);
+
+        $applicant->restore();
+
+        $fullName = $applicant->last_name . ', ' . $applicant->first_name;
+        AuditLog::log('restore', 'applicant', $applicant->id, $fullName,
+            "Restored applicant '{$fullName}'");
+
+        return response()->json($applicant->fresh());
+    }
+
+    public function bulkRestore(Request $request)
+    {
+        $request->validate([
+            'ids'   => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer', 'exists:applicants,id'],
+        ]);
+
+        $applicants = Applicant::onlyTrashed()
+            ->whereIn('id', $request->input('ids'))
+            ->get();
+
+        foreach ($applicants as $applicant) {
+            $fullName = $applicant->last_name . ', ' . $applicant->first_name;
+            $applicant->restore();
+            AuditLog::log('restore', 'applicant', $applicant->id, $fullName,
+                "Bulk-restored applicant '{$fullName}'");
+        }
+
+        return response()->json(['restored' => $applicants->count()]);
+    }
+
+    public function forceDestroy(int $applicantId)
+    {
+        $applicant = Applicant::withTrashed()->findOrFail($applicantId);
+
+        if (!$applicant->trashed()) {
+            return response()->json([
+                'message' => 'Applicant must be archived before permanent deletion.',
+            ], 422);
+        }
+
+        $fullName = $applicant->last_name . ', ' . $applicant->first_name;
+        $applicantId = $applicant->id;
+
+        if ($applicant->cv_path) {
+            Storage::disk('public')->delete($applicant->cv_path);
+        }
+
+        $applicant->forceDelete();
+
+        AuditLog::log('force_delete', 'applicant', $applicantId, $fullName,
+            "Permanently deleted applicant '{$fullName}'");
+
+        return response()->noContent();
+    }
+
+    public function bulkForceDestroy(Request $request)
+    {
+        $request->validate([
+            'ids'   => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer', 'exists:applicants,id'],
+        ]);
+
+        $applicants = Applicant::onlyTrashed()
+            ->whereIn('id', $request->input('ids'))
+            ->get();
+
+        foreach ($applicants as $applicant) {
+            $fullName = $applicant->last_name . ', ' . $applicant->first_name;
             if ($applicant->cv_path) {
                 Storage::disk('public')->delete($applicant->cv_path);
             }
-            $fullName = $applicant->last_name . ', ' . $applicant->first_name;
-            $applicant->delete();
-            AuditLog::log('delete', 'applicant', $applicant->id, $fullName,
-                "Bulk-deleted applicant '{$fullName}'");
+            $applicant->forceDelete();
+            AuditLog::log('force_delete', 'applicant', $applicant->id, $fullName,
+                "Bulk-permanently deleted applicant '{$fullName}'");
         }
 
         return response()->json(['deleted' => $applicants->count()]);
     }
 
-    public function cvDownload(Applicant $applicant)
+    public function cvDownload(int $applicantId)
     {
+        $applicant = Applicant::withTrashed()->findOrFail($applicantId);
+
         if (!$applicant->cv_path) {
             return response()->json(['message' => 'No CV uploaded for this applicant.'], 404);
         }
@@ -280,6 +371,71 @@ class ApplicantController extends Controller
         ]);
     }
 
+    private function runPublicAntiSpamChecks(Request $request): ?\Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'website' => ['nullable', 'string', 'max:255'],
+            'form_started_at' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        // Honeypot field should stay empty for real users.
+        if ($request->filled('website')) {
+            $this->logPublicSpamBlock($request, 'honeypot_filled');
+
+            return response()->json([
+                'message' => 'Your application has been submitted. We will update you after review through email.',
+            ], 201);
+        }
+
+        $startedAt = (int) $request->input('form_started_at', 0);
+        if ($startedAt > 0) {
+            $elapsedMs = (int) round(microtime(true) * 1000) - $startedAt;
+
+            // Very fast submission usually indicates bot behavior.
+            if ($elapsedMs >= 0 && $elapsedMs < 6000) {
+                $this->logPublicSpamBlock($request, 'submitted_too_fast', [
+                    'elapsed_ms' => $elapsedMs,
+                ]);
+
+                return response()->json([
+                    'message' => 'Your application has been submitted. We will update you after review through email.',
+                ], 201);
+            }
+        }
+
+        $email = trim((string) $request->input('email_address', ''));
+        if ($email !== '') {
+            $duplicateExists = Applicant::query()
+                ->where('email_address', $email)
+                ->where('created_at', '>=', now()->subMinutes(5))
+                ->exists();
+
+            if ($duplicateExists) {
+                $this->logPublicSpamBlock($request, 'duplicate_email_cooldown', [
+                    'cooldown_minutes' => 5,
+                ]);
+
+                return response()->json([
+                    'message' => 'A recent application with this email was already submitted. Please wait a few minutes before trying again.',
+                ], 429);
+            }
+        }
+
+        return null;
+    }
+
+    private function logPublicSpamBlock(Request $request, string $reason, array $context = []): void
+    {
+        Log::warning('Public applicant submission blocked by anti-spam', array_merge([
+            'reason' => $reason,
+            'ip' => $request->ip(),
+            'email' => (string) $request->input('email_address', ''),
+            'user_agent' => (string) $request->userAgent(),
+            'route' => $request->path(),
+            'submitted_at' => now()->toIso8601String(),
+        ], $context));
+    }
+
     private function createApplicant(Request $request, bool $sendNotifications): Applicant
     {
         $data = $this->validateApplicant($request);
@@ -325,4 +481,5 @@ class ApplicantController extends Controller
             'withdrawn',
         ];
     }
+
 }

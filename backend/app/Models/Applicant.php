@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Applicant extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'position_applied_for',
@@ -38,6 +40,7 @@ class Applicant extends Model
         'birthdate' => 'date',
         'expected_salary' => 'decimal:2',
         'total_work_experience_years' => 'decimal:1',
+        'deleted_at' => 'datetime',
     ];
 
     public function notes()

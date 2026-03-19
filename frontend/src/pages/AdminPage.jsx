@@ -48,6 +48,7 @@ function AdminPage() {
   const [selectedId, setSelectedId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [viewMode, setViewMode] = useState('active')
   const [notes, setNotes] = useState([])
   const [notesLoading, setNotesLoading] = useState(false)
   const [notesError, setNotesError] = useState(null)
@@ -64,6 +65,8 @@ function AdminPage() {
 
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting]         = useState(false)
+  const [forceTarget, setForceTarget]   = useState(null)
+  const [forcing, setForcing]           = useState(false)
   const [statusSaving, setStatusSaving] = useState(false)
 
   const loadApplicants = async (activeToken, filters = {}, preferredId = null) => {
@@ -130,8 +133,11 @@ function AdminPage() {
     }
 
     const urlApplicantId = searchParams.get('applicant') ? Number(searchParams.get('applicant')) : null
-    loadApplicants(token, { per_page: 10 }, urlApplicantId)
-  }, [token])
+    loadApplicants(token, {
+      per_page: 10,
+      archived: viewMode === 'archived' ? 'only' : undefined,
+    }, viewMode === 'active' ? urlApplicantId : null)
+  }, [token, searchParams, viewMode])
 
   useEffect(() => {
     if (!token) {
@@ -142,16 +148,17 @@ function AdminPage() {
       loadApplicants(token, {
         search: searchTerm || undefined,
         status: statusFilter || undefined,
+        archived: viewMode === 'archived' ? 'only' : undefined,
         page,
         per_page: 10,
       })
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [searchTerm, statusFilter, page, token])
+  }, [searchTerm, statusFilter, viewMode, page, token])
 
   useEffect(() => {
-    if (!token || !selectedId) {
+    if (!token || !selectedId || viewMode === 'archived') {
       setNotes([])
       return
     }
@@ -165,7 +172,19 @@ function AdminPage() {
       URL.revokeObjectURL(resumeBlobUrl)
       setResumeBlobUrl(null)
     }
-  }, [token, selectedId])
+  }, [token, selectedId, viewMode])
+
+  useEffect(() => {
+    if (!adminMessage) return
+    const timer = setTimeout(() => setAdminMessage(null), 4000)
+    return () => clearTimeout(timer)
+  }, [adminMessage])
+
+  useEffect(() => {
+    if (!adminError) return
+    const timer = setTimeout(() => setAdminError(null), 5000)
+    return () => clearTimeout(timer)
+  }, [adminError])
 
   const loadResumeBlobUrl = async () => {
     if (resumeBlobUrl) {
@@ -261,13 +280,79 @@ function AdminPage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error()
-      setApplicants((prev) => prev.filter((a) => a.id !== deleteTarget.id))
-      setSelectedId(null)
+      setApplicants((prev) => {
+        const deletedIndex = prev.findIndex((a) => a.id === deleteTarget.id)
+        const remaining = prev.filter((a) => a.id !== deleteTarget.id)
+
+        setSelectedId((currentSelected) => {
+          if (currentSelected && currentSelected !== deleteTarget.id && remaining.some((a) => a.id === currentSelected)) {
+            return currentSelected
+          }
+
+          if (remaining.length === 0) {
+            return null
+          }
+
+          const nearestIndex = Math.min(deletedIndex, remaining.length - 1)
+          return remaining[Math.max(nearestIndex, 0)]?.id || null
+        })
+
+        return remaining
+      })
       setDeleteTarget(null)
     } catch {
-      setAdminError('Failed to delete applicant.')
+      setAdminError('Failed to archive applicant.')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleRestoreApplicant = async (applicantId) => {
+    setAdminMessage(null)
+    setAdminError(null)
+    try {
+      const response = await fetch(`${apiBase}/api/applicants/${applicantId}/restore`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) throw new Error()
+
+      setApplicants((previous) => previous.filter((item) => item.id !== applicantId))
+      setSelectedId((current) => (current === applicantId ? null : current))
+      setAdminMessage('Applicant restored to active list.')
+    } catch (_) {
+      setAdminError('Failed to restore applicant.')
+    }
+  }
+
+  const handleForceDeleteApplicant = async () => {
+    if (!forceTarget) return
+    setForcing(true)
+    setAdminMessage(null)
+    setAdminError(null)
+    try {
+      const response = await fetch(`${apiBase}/api/applicants/${forceTarget.id}/force`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) throw new Error()
+
+      setApplicants((prev) => {
+        const remaining = prev.filter((a) => a.id !== forceTarget.id)
+        setSelectedId((current) => {
+          if (current && current !== forceTarget.id && remaining.some((a) => a.id === current)) {
+            return current
+          }
+          return remaining[0]?.id || null
+        })
+        return remaining
+      })
+      setForceTarget(null)
+      setAdminMessage('Applicant permanently deleted.')
+    } catch (_) {
+      setAdminError('Failed to permanently delete applicant.')
+    } finally {
+      setForcing(false)
     }
   }
 
@@ -560,25 +645,60 @@ function AdminPage() {
       <div className="admin-welcome">
         <div className="admin-welcome-text">
           <h2>{getGreeting()}, {user?.name?.split(' ')[0] || 'there'} 👋</h2>
-          <p>Here's the applicant pipeline. Select someone to view their details.</p>
+          <p>
+            {viewMode === 'active'
+              ? "Here's the active applicant pipeline. Select someone to view details."
+              : "You're viewing archived applicants. Restore or permanently delete records here."}
+          </p>
         </div>
         <span className="admin-welcome-date">{todayLabel}</span>
       </div>
-      <div className="admin-card admin-card-pipeline">
+      <div className={`admin-card admin-card-pipeline admin-card-mode-${viewMode}`}>
         <div className="admin-card-head">
           <div>
-            <h2>Applicants</h2>
-            <p>{total} applicant{total !== 1 ? 's' : ''} · Signed in as {user?.name || 'User'} ({user?.role || 'recruiter'})</p>
+            <h2>{viewMode === 'active' ? 'Applicants' : 'Archived Applicants'}</h2>
+            <p>{total} {viewMode === 'archived' ? 'archived ' : ''}applicant{total !== 1 ? 's' : ''} · Signed in as {user?.name || 'User'} ({user?.role || 'recruiter'})</p>
+            <span className={`admin-mode-pill admin-mode-pill-${viewMode}`}>
+              {viewMode === 'archived' ? 'Archive View' : 'Active View'}
+            </span>
           </div>
-          <NavLink to="/admin/applicants" className="btn btn-outline">
-            View full table
-          </NavLink>
+          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+            <div className="admin-mode-switch" role="tablist" aria-label="Pipeline mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === 'active'}
+                className={`admin-mode-switch-btn ${viewMode === 'active' ? 'is-active is-active-mode' : ''}`}
+                onClick={() => { setPage(1); setSelectedId(null); setViewMode('active') }}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === 'archived'}
+                className={`admin-mode-switch-btn ${viewMode === 'archived' ? 'is-active is-archived-mode' : ''}`}
+                onClick={() => { setPage(1); setSelectedId(null); setViewMode('archived') }}
+              >
+                Archived
+              </button>
+            </div>
+            <NavLink to="/admin/applicants" className="btn btn-outline">
+              View full table
+            </NavLink>
+          </div>
         </div>
+        {(adminMessage || adminError) ? (
+          <div className="admin-toast-stack" aria-live="polite">
+            {adminMessage ? <div className="admin-alert success">{adminMessage}</div> : null}
+            {adminError ? <div className="admin-alert error">{adminError}</div> : null}
+          </div>
+        ) : null}
         <div className="admin-layout">
           <aside className="admin-panel admin-sidebar">
             <div className="admin-panel-head">
-              <h4>Pipeline</h4>
-              {loadingApplicants ? <span>Loading...</span> : <span>{total} applicants</span>}
+              <h4>{viewMode === 'active' ? 'Pipeline' : 'Archive'}</h4>
+              {loadingApplicants ? <span>Loading...</span> : <span>{total} {viewMode === 'archived' ? 'archived ' : ''}applicants</span>}
             </div>
             <div className="admin-filters">
               <input
@@ -592,6 +712,7 @@ function AdminPage() {
                 className="select select-bordered"
                 value={statusFilter}
                 onChange={(event) => { setPage(1); setStatusFilter(event.target.value) }}
+                disabled={viewMode === 'archived'}
               >
                 <option value="">All statuses</option>
                 <optgroup label="Pipeline">
@@ -624,7 +745,7 @@ function AdminPage() {
                 <li>
                   <div className="admin-empty-filter-state">
                     <span>🔍</span>
-                    <p>No applicants match your filters.</p>
+                    <p>No {viewMode === 'archived' ? 'archived' : 'active'} applicants match your filters.</p>
                     <button type="button" onClick={() => { setSearchTerm(''); setStatusFilter('') }}>Clear filters</button>
                   </div>
                 </li>
@@ -691,6 +812,7 @@ function AdminPage() {
                         <select
                           className="select select-bordered"
                           value={selectedApplicant.status}
+                          disabled={viewMode === 'archived'}
                           onChange={(event) => {
                             const value = event.target.value
                             setApplicants((previous) =>
@@ -718,7 +840,7 @@ function AdminPage() {
                         <button
                           type="button"
                           className="btn btn-sm apply-submit"
-                          disabled={statusSaving}
+                          disabled={statusSaving || viewMode === 'archived'}
                           onClick={() => handleStatusSave(selectedApplicant.id, selectedApplicant.status)}
                         >
                           {statusSaving ? (<><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Saving…</>) : 'Save'}
@@ -734,13 +856,32 @@ function AdminPage() {
                         Download Details
                       </button>
                       {canDelete && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-error btn-outline"
-                          onClick={() => setDeleteTarget({ id: selectedApplicant.id, name: `${toName(selectedApplicant.first_name)} ${toName(selectedApplicant.last_name)}` })}
-                        >
-                          Delete Applicant
-                        </button>
+                        viewMode === 'active' ? (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-error btn-outline"
+                            onClick={() => setDeleteTarget({ id: selectedApplicant.id, name: `${toName(selectedApplicant.first_name)} ${toName(selectedApplicant.last_name)}` })}
+                          >
+                            Archive Applicant
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline"
+                              onClick={() => handleRestoreApplicant(selectedApplicant.id)}
+                            >
+                              Restore Applicant
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-error"
+                              onClick={() => setForceTarget({ id: selectedApplicant.id, name: `${toName(selectedApplicant.first_name)} ${toName(selectedApplicant.last_name)}` })}
+                            >
+                              Delete Permanently
+                            </button>
+                          </>
+                        )
                       )}
                     </div>
                   </div>
@@ -892,29 +1033,36 @@ function AdminPage() {
                     <h4>📝 HR Notes</h4>
                     {notesLoading ? <span className="admin-notes-loading">Loading...</span> : null}
                   </div>
-                  <form className="admin-note-form" onSubmit={handleNoteSubmit}>
-                    <div className="admin-note-composer">
-                      <textarea
-                        className="admin-note-textarea"
-                        placeholder="Write a note for recruiters…"
-                        value={noteDraft}
-                        onChange={(event) => setNoteDraft(event.target.value)}
-                        rows={3}
-                      />
-                      <div className="admin-note-composer-footer">
-                        <span className="admin-note-composer-hint">
-                          {noteDraft.length > 0 ? `${noteDraft.length} characters` : 'Visible to all recruiters'}
-                        </span>
-                        <button type="submit" className="admin-note-submit" disabled={noteSaving || !noteDraft.trim()}>
-                          {noteSaving ? (
-                            <><span className="admin-note-spinner" />Saving…</>
-                          ) : (
-                            <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Add note</>
-                          )}
-                        </button>
+                  {viewMode === 'active' ? (
+                    <form className="admin-note-form" onSubmit={handleNoteSubmit}>
+                      <div className="admin-note-composer">
+                        <textarea
+                          className="admin-note-textarea"
+                          placeholder="Write a note for recruiters…"
+                          value={noteDraft}
+                          onChange={(event) => setNoteDraft(event.target.value)}
+                          rows={3}
+                        />
+                        <div className="admin-note-composer-footer">
+                          <span className="admin-note-composer-hint">
+                            {noteDraft.length > 0 ? `${noteDraft.length} characters` : 'Visible to all recruiters'}
+                          </span>
+                          <button type="submit" className="admin-note-submit" disabled={noteSaving || !noteDraft.trim()}>
+                            {noteSaving ? (
+                              <><span className="admin-note-spinner" />Saving…</>
+                            ) : (
+                              <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Add note</>
+                            )}
+                          </button>
+                        </div>
                       </div>
+                    </form>
+                  ) : (
+                    <div className="admin-empty-state" style={{ padding: '1rem 0 1.25rem' }}>
+                      <div className="admin-empty-icon">🗄️</div>
+                      <p>Notes editing is disabled in archive view.</p>
                     </div>
-                  </form>
+                  )}
                   {notesError ? <div className="admin-alert error">{notesError}</div> : null}
                   {notes.length ? (
                     <ul className="admin-note-list">
@@ -941,11 +1089,9 @@ function AdminPage() {
                     Submitted {new Date(selectedApplicant.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                 </div>
-                {adminMessage ? <span className="admin-alert success">{adminMessage}</span> : null}
-                {adminError ? <span className="admin-alert error">{adminError}</span> : null}
               </div>
             ) : (
-              <div className="admin-empty-state">
+              <div className="admin-empty-state admin-detail-empty-state">
                 <div className="admin-empty-icon">👈</div>
                 <p>No applicant selected</p>
                 <span>Pick someone from the pipeline to view their details.</span>
@@ -960,9 +1106,9 @@ function AdminPage() {
             <div className="del-modal-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </div>
-            <h3 className="del-modal-title">Delete applicant?</h3>
+            <h3 className="del-modal-title">Archive applicant?</h3>
             <p className="del-modal-body">
-              <strong>{deleteTarget.name}</strong> will be permanently removed from the system. This action cannot be undone.
+              <strong>{deleteTarget.name}</strong> will be moved to archive and hidden from active applicants.
             </p>
             <div className="del-modal-actions">
               <button
@@ -980,9 +1126,44 @@ function AdminPage() {
                 disabled={deleting}
               >
                 {deleting ? (
+                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Archiving…</>
+                ) : (
+                  <>Archive applicant</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {forceTarget && (
+        <div className="del-modal-backdrop" onClick={() => !forcing && setForceTarget(null)}>
+          <div className="del-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="del-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </div>
+            <h3 className="del-modal-title">Delete permanently?</h3>
+            <p className="del-modal-body">
+              <strong>{forceTarget.name}</strong> will be permanently removed from the system, including CV files and notes. This action cannot be undone.
+            </p>
+            <div className="del-modal-actions">
+              <button
+                type="button"
+                className="del-modal-cancel"
+                onClick={() => setForceTarget(null)}
+                disabled={forcing}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="del-modal-confirm"
+                onClick={handleForceDeleteApplicant}
+                disabled={forcing}
+              >
+                {forcing ? (
                   <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Deleting…</>
                 ) : (
-                  <>Delete applicant</>
+                  <>Delete permanently</>
                 )}
               </button>
             </div>

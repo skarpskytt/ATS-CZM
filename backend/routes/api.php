@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
-Route::post('public/applicants', [ApplicantController::class, 'storePublic'])->middleware('throttle:20,1');
+Route::post('public/applicants', [ApplicantController::class, 'storePublic'])->middleware('throttle:10,1');
 Route::get('positions', [PositionController::class, 'publicIndex']);
 
 Route::middleware('auth:sanctum')->group(function (): void {
@@ -23,7 +23,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Applicants - all roles can read & add notes
     Route::get('applicants', [ApplicantController::class, 'index']);
     Route::get('applicants/{applicant}', [ApplicantController::class, 'show']);
-    Route::get('applicants/{applicant}/cv', [ApplicantController::class, 'cvDownload']);
+    Route::get('applicants/{applicantId}/cv', [ApplicantController::class, 'cvDownload']);
     Route::get('applicants/{applicant}/notes', [ApplicantNoteController::class, 'index']);
     Route::post('applicants/{applicant}/notes', [ApplicantNoteController::class, 'store']);
 
@@ -36,9 +36,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->middleware('perm:canEdit');
 
     // delete - dynamic permission: canDelete
-    Route::delete('applicants/{applicant}', [ApplicantController::class, 'destroy'])
-        ->middleware('perm:canDelete');
     Route::delete('applicants', [ApplicantController::class, 'bulkDestroy'])
+        ->middleware('perm:canDelete');
+    Route::patch('applicants/restore', [ApplicantController::class, 'bulkRestore'])
+        ->middleware('perm:canDelete');
+    Route::delete('applicants/force', [ApplicantController::class, 'bulkForceDestroy'])
+        ->middleware('perm:canDelete');
+    Route::patch('applicants/{applicantId}/restore', [ApplicantController::class, 'restore'])
+        ->middleware('perm:canDelete');
+    Route::delete('applicants/{applicantId}/force', [ApplicantController::class, 'forceDestroy'])
+        ->middleware('perm:canDelete');
+    Route::delete('applicants/{applicant}', [ApplicantController::class, 'destroy'])
         ->middleware('perm:canDelete');
 
     // Analytics - dynamic permission: canViewAnalytics
