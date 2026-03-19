@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, useRole } from '../context/AuthContext'
 import AdminLayout from '../components/AdminLayout'
+import ApplicantTimeline from '../components/ApplicantTimeline'
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const statusOptions = [
@@ -114,7 +116,7 @@ function AdminApplicantsPage() {
   const [showBulkForceModal, setShowBulkForceModal] = useState(false)
   const [bulkForcing, setBulkForcing]     = useState(false)
   const [openDropdownId, setOpenDropdownId] = useState(null)
-  const [dropdownPos, setDropdownPos]       = useState({ top: 0, left: 0, above: false })
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, above: false })
   const [viewTargetId, setViewTargetId]   = useState(null)
   const [viewApplicant, setViewApplicant] = useState(null)
   const [viewNotes, setViewNotes]         = useState([])
@@ -211,16 +213,37 @@ function AdminApplicantsPage() {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [viewTargetId])
 
+  useEffect(() => {
+    if (!viewTargetId) return
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [viewTargetId])
+
   const toggleDropdown = (e, applicantId) => {
     e.stopPropagation()
-    if (openDropdownId === applicantId) { setOpenDropdownId(null); return }
+    if (openDropdownId === applicantId) {
+      setOpenDropdownId(null)
+      return
+    }
+
     const rect = e.currentTarget.getBoundingClientRect()
-    const showAbove = rect.bottom + 340 > window.innerHeight
+    const panelWidth = 210
+    const panelHeight = 340
+    const gap = 4
+    const scrollX = window.scrollX || window.pageXOffset
+    const scrollY = window.scrollY || window.pageYOffset
+    const showAbove = rect.bottom + panelHeight > window.innerHeight
+
+    const rawLeft = scrollX + rect.left
+    const maxLeft = scrollX + window.innerWidth - panelWidth - 8
+
     setDropdownPos({
-      top:    showAbove ? null : rect.bottom + 6,
-      bottom: showAbove ? window.innerHeight - rect.top + 6 : null,
-      left:   Math.min(rect.left, window.innerWidth - 210),
-      above:  showAbove,
+      top: showAbove ? (scrollY + rect.top - panelHeight - gap) : (scrollY + rect.bottom + gap),
+      left: Math.max(scrollX + 8, Math.min(rawLeft, maxLeft)),
+      above: showAbove,
     })
     setOpenDropdownId(applicantId)
   }
@@ -297,6 +320,26 @@ function AdminApplicantsPage() {
       setViewError('Unable to load applicant details.')
     } finally {
       setViewLoading(false)
+    }
+  }
+
+  const handleDownloadCv = async (applicant) => {
+    if (!applicant?.id) return
+    try {
+      const res = await fetch(`${apiBase}/api/applicants/${applicant.id}/cv`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const ext = applicant.cv_path?.split('.').pop() || 'pdf'
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${toName(applicant.last_name || 'applicant')}_${toName(applicant.first_name || 'cv')}.${ext}`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (_) {
+      setViewError('Unable to download CV.')
     }
   }
 
@@ -1012,17 +1055,15 @@ function AdminApplicantsPage() {
           </div>
         </div>
       </div>
-      {/* ── Status dropdown (rendered outside table to avoid overflow clipping) ── */}
-      {openDropdownId && (() => {
+      {openDropdownId && createPortal((() => {
         const activeApplicant = applicants.find((a) => a.id === openDropdownId)
         if (!activeApplicant) return null
         return (
           <div
-            className={`status-dropdown${dropdownPos.above ? ' above' : ''}`}
+            className={`status-dropdown status-dropdown-portal${dropdownPos.above ? ' above' : ''}`}
             style={{
-              top:    dropdownPos.top    != null ? dropdownPos.top    : 'auto',
-              bottom: dropdownPos.bottom != null ? dropdownPos.bottom : 'auto',
-              left:   dropdownPos.left,
+              top: dropdownPos.top,
+              left: dropdownPos.left,
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
@@ -1059,7 +1100,7 @@ function AdminApplicantsPage() {
             ))}
           </div>
         )
-      })()}
+      })(), document.body)}
       {/* ── Bulk action bar ── */}
       {canDelete && selectedIds.length > 0 && (
         <div className="bulk-action-bar">
@@ -1089,10 +1130,9 @@ function AdminApplicantsPage() {
           </div>
         </div>
       )}
-      {viewTargetId && (
-        <div className="avm-backdrop" onClick={() => !viewLoading && closeViewModal()}>
-          <div className="avm" onClick={e => e.stopPropagation()}>
-
+      {viewTargetId && createPortal((
+        <div className="avm-backdrop" onMouseDown={closeViewModal}>
+          <div className="avm" onMouseDown={(e) => e.stopPropagation()}>
             {/* ── Banner ── */}
             <div className="avm-banner">
               <div className="avm-banner-inner">
@@ -1101,43 +1141,41 @@ function AdminApplicantsPage() {
                     {getInitials(viewApplicant.first_name, viewApplicant.last_name)}
                   </div>
                 ) : (
-                  <div className="avm-avatar-lg avm-avatar-loading">…</div>
+                  <div className="avm-avatar-lg avm-avatar-loading">...</div>
                 )}
                 <div className="avm-banner-text">
-                  <div className="avm-eyebrow">Applicant Profile</div>
-                  <h2 className="avm-name">
-                    {viewApplicant
-                      ? `${toName(viewApplicant.first_name)} ${toName(viewApplicant.last_name)}`
-                      : 'Loading…'}
-                  </h2>
+                  <div className="avm-eyebrow">Applicant profile</div>
+                  <h3 className="avm-name">
+                    {viewApplicant ? `${toName(viewApplicant.first_name)} ${toName(viewApplicant.last_name)}` : 'Loading applicant...'}
+                  </h3>
                   <div className="avm-position">
-                    {viewApplicant ? safeValue(viewApplicant.position_applied_for) : 'Fetching details…'}
+                    <span>{viewApplicant ? safeValue(viewApplicant.position_applied_for) : 'Please wait...'}</span>
+                    {viewApplicant?.status && (
+                      <span className={`admin-chip ${viewApplicant.status}`}>{formatStatus(viewApplicant.status)}</span>
+                    )}
                   </div>
                 </div>
               </div>
               <div className="avm-banner-actions">
-                {viewApplicant?.cv_path && (
-                  <a
+                {viewApplicant?.cv_path ? (
+                  <button
+                    type="button"
                     className="avm-cv-btn"
-                    href={`${apiBase}/api/applicants/${viewApplicant.id}/cv`}
-                    target="_blank"
-                    rel="noreferrer"
+                    onClick={() => handleDownloadCv(viewApplicant)}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    View CV
-                  </a>
-                )}
-                <button className="avm-close-btn" type="button" onClick={closeViewModal} disabled={viewLoading} aria-label="Close">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
+                    Download CV
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="avm-close-btn"
+                  onClick={closeViewModal}
+                  aria-label="Close applicant view"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
             </div>
-
             {/* ── Body ── */}
             <div className="avm-body">
               {viewLoading ? (
@@ -1245,6 +1283,9 @@ function AdminApplicantsPage() {
                         <div className="avm-pair"><span>Expected salary</span><strong>{formatCurrency(viewApplicant.expected_salary)}</strong></div>
                       </div>
                     </div>
+
+                    {/* Pipeline Timeline */}
+                    <ApplicantTimeline applicantId={viewApplicant.id} token={token} />
                   </div>
 
                   {/* HR Notes */}
@@ -1280,7 +1321,7 @@ function AdminApplicantsPage() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
       {/* ── Archive confirmation modal ── */}
       {deleteTarget && (
         <div className="del-modal-backdrop" onClick={() => !deleting && setDeleteTarget(null)}>

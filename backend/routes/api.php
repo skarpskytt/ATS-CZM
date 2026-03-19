@@ -25,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('applicants/{applicant}', [ApplicantController::class, 'show']);
     Route::get('applicants/{applicantId}/cv', [ApplicantController::class, 'cvDownload']);
     Route::get('applicants/{applicant}/notes', [ApplicantNoteController::class, 'index']);
+    Route::get('applicants/{applicantId}/timeline', [AuditLogController::class, 'applicantTimeline']);
     Route::post('applicants/{applicant}/notes', [ApplicantNoteController::class, 'store']);
 
     // create / edit - dynamic permission: canEdit
