@@ -10,6 +10,8 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* ── Text & UI Colors ── */
   --ink: #201a0f;
   --ink-subtle: #4f4634;
   --muted: #7a705f;
@@ -17,6 +19,75 @@
   --apply-gold-soft: #f2d59b;
   --apply-green: #1e6b4f;
   --apply-green-soft: #b9e3c8;
+
+  /* ── Brand Colors (Admin/Dark) ── */
+  --color-primary-dark: #0f3d2e;
+  --color-primary-dark-light: #1a6644;
+  --color-primary-dark-lighter: #176a4d;
+  --color-gold: #c8a441;
+  --color-gold-light: #d4af53;
+  --color-gold-soft: #f5edd8;
+
+  /* ── Semantic Colors ── */
+  --color-success: #10b981;
+  --color-success-dark: #047857;
+  --color-error: #ef4444;
+  --color-error-dark: #dc2626;
+  --color-warning: #f59e0b;
+  --color-info: #06b6d4;
+
+  /* ── Gray Scale (muted/subtle) ── */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-400: #9ca3af;
+  --color-gray-600: #4b5f56;
+
+  /* ── Spacing (commonly used rem values) ── */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+  --space-3xl: 2.5rem;
+  --space-4xl: 3rem;
+
+  /* ── Border Radius (reused patterns) ── */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 999px;
+
+  /* ── Typography ── */
+  --text-xs: 0.7rem;
+  --text-sm: 0.75rem;
+  --text-base: 0.82rem;
+  --text-md: 0.88rem;
+  --text-lg: 0.92rem;
+  --text-xl: 1rem;
+  --text-2xl: 1.2rem;
+  --text-3xl: 1.4rem;
+
+  /* ── Shadows (common patterns) ── */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(15, 61, 46, 0.2);
+  --shadow-lg: 0 8px 24px rgba(15, 61, 46, 0.15);
+  --shadow-xl: 0 20px 60px rgba(15, 61, 46, 0.22);
+
+  /* ── Border Colors (rgba patterns) ── */
+  --border-gold-light: rgba(200, 164, 65, 0.25);
+  --border-gold-medium: rgba(200, 164, 65, 0.35);
+  --border-primary-light: rgba(15, 61, 46, 0.15);
+  --border-primary-medium: rgba(15, 61, 46, 0.25);
+
+  /* ── Transition Durations ── */
+  --transition-fast: 0.15s;
+  --transition-base: 0.2s;
+  --transition-slow: 0.3s;
 }
 
 * {

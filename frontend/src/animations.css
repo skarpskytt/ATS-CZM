@@ -1,0 +1,168 @@
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS.css - Reusable keyframe animations
+   Extracted from App.css for better maintainability
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Core UI animations (widely reused) ── */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rowEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── Skeleton/loading animation ── */
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* ── Form/field animations ── */
+
+@keyframes formFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fieldFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Apply page animations ── */
+
+@keyframes applyRotateTrack {
+  0%, 10% { transform: translateY(0%); }
+  14%, 24% { transform: translateY(-14.2857143%); }
+  28%, 38% { transform: translateY(-28.5714286%); }
+  42%, 52% { transform: translateY(-42.8571429%); }
+  56%, 66% { transform: translateY(-57.1428571%); }
+  70%, 80% { transform: translateY(-71.4285714%); }
+  84%, 100% { transform: translateY(-85.7142857%); }
+}
+
+@keyframes applyAlertPop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes apply-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes apply-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Floating/hovering animation ── */
+
+@keyframes floatGlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(12px);
+  }
+}
+
+/* ── Dropdown animations ── */
+
+@keyframes dd-enter {
+  from { opacity: 0; transform: scale(0.93) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+@keyframes dd-enter-above {
+  from { opacity: 0; transform: scale(0.93) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+/* ── Spinner animation (consolidated) ── */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes noteSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Action bar animations ── */
+
+@keyframes bulk-bar-up {
+  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+}
+
+/* ── Date picker animations ── */
+
+@keyframes dpFadeIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* ── Slide-up animation (modals, menus) ── */
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
