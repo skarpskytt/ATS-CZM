@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import DatePicker from '../components/DatePicker'
 import Footer from '../components/Footer'
 
@@ -111,6 +111,8 @@ function ApplyPage() {
   const [formStartedAt, setFormStartedAt] = useState(() => Date.now())
   const [currentStep, setCurrentStep] = useState(1)
   const [furthestStepReached, setFurthestStepReached] = useState(1)
+  const [dragOver, setDragOver] = useState(false)
+  const formRef = useRef(null)
 
   const totalSteps = formSteps.length
   const progressPercent = Math.round((currentStep / totalSteps) * 100)
@@ -194,9 +196,42 @@ function ApplyPage() {
   }
 
   const handleFileChange = (event) => {
-    const [file] = event.target.files
-    setCvFile(file || null)
+    const [file] = event.target.files || []
+    if (file && /\.(pdf|doc|docx)$/i.test(file.name)) {
+      setCvFile(file)
+      setError(null)
+    }
+  }
+
+  const handleDrop = (event) => {
+    event.preventDefault()
+    setDragOver(false)
+    const [file] = event.dataTransfer?.files || []
+    if (file && /\.(pdf|doc|docx)$/i.test(file.name)) {
+      setCvFile(file)
+      setError(null)
+    } else if (file) {
+      setError('Please upload a PDF, DOC, or DOCX file.')
+    }
+  }
+
+  const handleDragOver = (event) => {
+    event.preventDefault()
+    setDragOver(true)
+  }
+
+  const handleDragLeave = () => setDragOver(false)
+
+  const clearCvFile = () => {
+    setCvFile(null)
     setError(null)
+  }
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return ''
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   const buildFormData = () => {
@@ -275,6 +310,10 @@ function ApplyPage() {
     return () => clearTimeout(timer)
   }, [error])
 
+  useEffect(() => {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [currentStep])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setSubmitting(true)
@@ -322,6 +361,12 @@ function ApplyPage() {
     return text !== '' ? text : 'Not provided'
   }
 
+  const formatCurrency = (value) => {
+    const num = parseFloat(String(value ?? '').replace(/[^0-9.-]/g, ''))
+    if (Number.isNaN(num) || num === 0) return 'Not provided'
+    return `₱${num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
   const resolvedGender = form.gender === 'Other' ? (customGender.trim() || 'Other') : form.gender
   const resolvedVacancySource = form.vacancy_source === 'Other'
     ? (customVacancySource.trim() || 'Other')
@@ -353,11 +398,6 @@ function ApplyPage() {
             <p className="apply-lead">
               Submit your details and CV. Our recruiters will review your application and update you through email.
             </p>
-            <div className="apply-hero-badges">
-              <span className="apply-pill">Fast review</span>
-              <span className="apply-pill">Secure uploads</span>
-              <span className="apply-pill">Email updates</span>
-            </div>
           </div>
           <div className="apply-hero-logo-only" aria-label="Czark Mak logo">
             <img
@@ -369,7 +409,7 @@ function ApplyPage() {
         </div>
       </section>
 
-      <form className="apply-form" onSubmit={handleSubmit} encType="multipart/form-data">
+      <form ref={formRef} className="apply-form" onSubmit={handleSubmit} encType="multipart/form-data">
         <input
           type="text"
           name="website"
@@ -418,15 +458,47 @@ function ApplyPage() {
               <div className="divider apply-divider">Resume</div>
               <div className="resume-first-card">
                 <p className="resume-first-title">Upload your resume to get started</p>
-                <p className="resume-first-subtitle">We will attach your resume to your application. Complete the details manually in the next steps.</p>
-                <input
-                  className="file-input file-input-bordered file-input-lg w-full bg-white transition-all duration-200 ease-out hover:-translate-y-0.5 focus:-translate-y-0.5 focus:shadow-lg"
-                  type="file"
-                  name="upload_cv"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleFileChange}
-                />
-                {cvFile ? <p className="resume-file-pill">Attached: {cvFile.name}</p> : <p className="resume-file-help">Accepted format: PDF, DOC, DOCX</p>}
+                <p className="resume-first-subtitle">We will attach your resume to your application. Drag and drop or click to upload.</p>
+                <div
+                  className={`resume-drop-zone ${dragOver ? ' is-dragover' : ''} ${cvFile ? ' has-file' : ''}`}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onClick={() => !cvFile && document.getElementById('upload_cv_input')?.click()}
+                >
+                  <input
+                    id="upload_cv_input"
+                    type="file"
+                    name="upload_cv"
+                    accept=".pdf,.doc,.docx"
+                    onChange={handleFileChange}
+                    className="resume-file-input-hidden"
+                    aria-label="Upload resume"
+                  />
+                  {cvFile ? (
+                    <div className="resume-file-preview">
+                      <span className="resume-file-icon">📄</span>
+                      <div className="resume-file-details">
+                        <span className="resume-file-name">{cvFile.name}</span>
+                        <span className="resume-file-size">{formatFileSize(cvFile.size)}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="resume-file-remove"
+                        onClick={(e) => { e.stopPropagation(); clearCvFile() }}
+                        aria-label="Remove file"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="resume-drop-icon">📎</span>
+                      <p className="resume-drop-text">Drop your resume here or click to browse</p>
+                      <p className="resume-drop-hint">PDF, DOC, or DOCX — max 5 MB</p>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             ) : null}
@@ -662,7 +734,7 @@ function ApplyPage() {
                 <label className="label">
                   <span className="label-text">Contact number *</span>
                 </label>
-                <input className="input input-bordered input-lg w-full bg-white transition-all duration-200 ease-out hover:-translate-y-0.5 focus:-translate-y-0.5 focus:shadow-lg" name="contact_number" value={form.contact_number} onChange={handleChange} required />
+                <input type="tel" inputMode="tel" className="input input-bordered input-lg w-full bg-white transition-all duration-200 ease-out hover:-translate-y-0.5 focus:-translate-y-0.5 focus:shadow-lg" name="contact_number" value={form.contact_number} onChange={handleChange} placeholder="e.g., 09171234567" required />
               </div>
               <div className="form-control">
                 <label className="label">
@@ -733,30 +805,56 @@ function ApplyPage() {
 
             {currentStep === 5 ? (
             <div className="form-section" style={{ '--delay': '240ms' }}>
-              <div className="divider apply-divider">Review</div>
-              <div className="review-grid">
-                <div className="review-item"><strong>Resume</strong><span>{cvFile ? cvFile.name : 'Not uploaded'}</span></div>
-                <div className="review-item"><strong>Position</strong><span>{displayValue(form.position_applied_for)}</span></div>
-                <div className="review-item"><strong>Last name</strong><span>{displayValue(form.last_name)}</span></div>
-                <div className="review-item"><strong>First name</strong><span>{displayValue(form.first_name)}</span></div>
-                <div className="review-item"><strong>Middle name</strong><span>{displayValue(form.middle_name)}</span></div>
-                <div className="review-item"><strong>Gender</strong><span>{displayValue(resolvedGender)}</span></div>
-                <div className="review-item"><strong>Civil status</strong><span>{displayValue(form.civil_status)}</span></div>
-                <div className="review-item"><strong>Birthdate</strong><span>{displayValue(form.birthdate)}</span></div>
-                <div className="review-item review-item-full"><strong>Permanent address</strong><span>{displayValue(form.permanent_address)}</span></div>
+              <div className="divider apply-divider">Review your application</div>
+              <p className="review-intro">Please verify your details below. You can edit any section by clicking the link.</p>
 
-                <div className="review-item"><strong>Highest education</strong><span>{displayValue(form.highest_education_level)}</span></div>
-                <div className="review-item"><strong>Degree course</strong><span>{displayValue(form.bachelors_degree_course)}</span></div>
-                <div className="review-item"><strong>Year graduated</strong><span>{displayValue(form.year_graduated)}</span></div>
-                <div className="review-item"><strong>Last school</strong><span>{displayValue(form.last_school_attended)}</span></div>
-                <div className="review-item"><strong>PRC license</strong><span>{displayValue(form.prc_license)}</span></div>
-                <div className="review-item"><strong>Work experience</strong><span>{displayValue(form.total_work_experience_years)}</span></div>
+              <div className="review-sections">
+                <div className="review-section">
+                  <div className="review-section-header">
+                    <span className="review-section-title">Resume &amp; Identity</span>
+                    <button type="button" className="review-edit-link" onClick={() => goToStep(1)} aria-label="Edit resume and identity">Edit</button>
+                  </div>
+                  <div className="review-grid">
+                    <div className="review-item"><strong>Resume</strong><span>{cvFile ? `${cvFile.name} (${formatFileSize(cvFile.size)})` : 'Not uploaded'}</span></div>
+                    <div className="review-item"><strong>Position</strong><span>{displayValue(form.position_applied_for)}</span></div>
+                    <div className="review-item"><strong>Last name</strong><span>{displayValue(form.last_name)}</span></div>
+                    <div className="review-item"><strong>First name</strong><span>{displayValue(form.first_name)}</span></div>
+                    <div className="review-item"><strong>Middle name</strong><span>{displayValue(form.middle_name)}</span></div>
+                    <div className="review-item"><strong>Gender</strong><span>{displayValue(resolvedGender)}</span></div>
+                    <div className="review-item"><strong>Civil status</strong><span>{displayValue(form.civil_status)}</span></div>
+                    <div className="review-item"><strong>Birthdate</strong><span>{displayValue(form.birthdate)}</span></div>
+                    <div className="review-item review-item-full"><strong>Permanent address</strong><span>{displayValue(form.permanent_address)}</span></div>
+                  </div>
+                </div>
 
-                <div className="review-item"><strong>Contact number</strong><span>{displayValue(form.contact_number)}</span></div>
-                <div className="review-item"><strong>Email address</strong><span>{displayValue(form.email_address)}</span></div>
-                <div className="review-item"><strong>Expected salary</strong><span>{displayValue(form.expected_salary)}</span></div>
-                <div className="review-item"><strong>Preferred location</strong><span>{displayValue(form.preferred_work_location)}</span></div>
-                <div className="review-item review-item-full"><strong>Vacancy source</strong><span>{displayValue(resolvedVacancySource)}</span></div>
+                <div className="review-section">
+                  <div className="review-section-header">
+                    <span className="review-section-title">Education &amp; Experience</span>
+                    <button type="button" className="review-edit-link" onClick={() => goToStep(3)}>Edit</button>
+                  </div>
+                  <div className="review-grid">
+                    <div className="review-item"><strong>Highest education</strong><span>{displayValue(form.highest_education_level)}</span></div>
+                    <div className="review-item"><strong>Degree course</strong><span>{displayValue(form.bachelors_degree_course)}</span></div>
+                    <div className="review-item"><strong>Year graduated</strong><span>{displayValue(form.year_graduated)}</span></div>
+                    <div className="review-item"><strong>Last school</strong><span>{displayValue(form.last_school_attended)}</span></div>
+                    <div className="review-item"><strong>PRC license</strong><span>{displayValue(form.prc_license)}</span></div>
+                    <div className="review-item"><strong>Work experience</strong><span>{displayValue(form.total_work_experience_years) === 'Not provided' ? 'Not provided' : `${form.total_work_experience_years} years`}</span></div>
+                  </div>
+                </div>
+
+                <div className="review-section">
+                  <div className="review-section-header">
+                    <span className="review-section-title">Contact &amp; Preferences</span>
+                    <button type="button" className="review-edit-link" onClick={() => goToStep(4)}>Edit</button>
+                  </div>
+                  <div className="review-grid">
+                    <div className="review-item"><strong>Contact number</strong><span>{displayValue(form.contact_number)}</span></div>
+                    <div className="review-item"><strong>Email address</strong><span>{displayValue(form.email_address)}</span></div>
+                    <div className="review-item"><strong>Expected salary</strong><span>{formatCurrency(form.expected_salary)}</span></div>
+                    <div className="review-item"><strong>Preferred location</strong><span>{displayValue(form.preferred_work_location)}</span></div>
+                    <div className="review-item review-item-full"><strong>Vacancy source</strong><span>{displayValue(resolvedVacancySource)}</span></div>
+                  </div>
+                </div>
               </div>
 
               <div className="divider apply-divider">Terms &amp; Conditions</div>
@@ -855,12 +953,14 @@ function ApplyPage() {
 
               <div className="apply-form-feedback">
               {message ? (
-                <div className="alert alert-success apply-form-alert" role="alert">
+                <div className="alert alert-success apply-form-alert apply-form-alert-with-icon" role="alert">
+                  <span className="apply-alert-icon" aria-hidden>✓</span>
                   <span>{message}</span>
                 </div>
               ) : null}
               {error ? (
-                <div className="alert alert-error apply-form-alert" role="alert">
+                <div className="alert alert-error apply-form-alert apply-form-alert-with-icon" role="alert">
+                  <span className="apply-alert-icon apply-alert-icon-error" aria-hidden>!</span>
                   <span>{error}</span>
                 </div>
               ) : null}

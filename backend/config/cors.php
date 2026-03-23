@@ -21,7 +21,8 @@ return [
         'http://127.0.0.1:5173',
     ]),
 
-    'allowed_origins_patterns' => [],
+    // Allow LAN access (e.g. http://192.168.x.x:5173)
+    'allowed_origins_patterns' => ['#^http://192\.168\.\d+\.\d+:5173$#'],
 
     'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 
