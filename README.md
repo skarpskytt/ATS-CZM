@@ -22,8 +22,12 @@ A full-stack web-based recruitment platform that lets candidates apply through a
 ## Features
 
 ### Public Applicant Form (`/apply`)
-- Submit name, contact, position, and upload a CV (PDF / DOC / DOCX, max 5 MB)
+- Multi-step form with progress indicator and auto-scroll between steps
+- Drag-and-drop resume upload with file preview and size display
+- Accepts CV files: PDF, DOC, DOCX (max 5 MB)
+- Organized review section with editable segments (Resume, Education, Contact)
 - Email confirmation sent to applicant on successful submission
+- Responsive design with optimized mobile experience
 
 ### Admin / Recruiter Panel
 
@@ -37,12 +41,14 @@ A full-stack web-based recruitment platform that lets candidates apply through a
 - Search and status filter
 - Applicant detail panel: full profile, CV download, status update, HR notes
 - Inline status update triggers email notification to applicant
+- Auto-scroll modals for archive and delete actions with blurred backdrop
 
 #### Applicants Table (`/admin/applicants`)
 - Paginated table (20 per page) with sort by name, status, and date
 - Filters: keyword search, status, position, date range
 - Color-coded status chips with inline status dropdown
-- Delete applicant with confirmation modal
+- Delete applicant with confirmation modal (auto-scrolls to center)
+- Bulk archive and force delete actions with modals
 - PDF export via browser print dialog
 - Responsive � hides less critical columns on smaller screens
 
@@ -54,14 +60,16 @@ A full-stack web-based recruitment platform that lets candidates apply through a
 - **Application Sources** � bar chart by source
 
 #### Positions Manager (`/admin/positions`)
-- Create, edit, and delete job positions
+- Create, edit, and delete job positions with smooth modal interactions
 - Toggle position active/inactive status
 - Paginated table with responsive column hiding
+- Auto-scroll modals with blurred backdrop for all actions
 
 #### Users Manager (`/admin/users`)
 - Create and manage admin/recruiter accounts
 - Role assignment (admin / recruiter)
 - Password reset with show/hide toggle
+- Delete user with confirmation modal (auto-scrolls to center)
 
 ---
 
@@ -169,7 +177,19 @@ npm run dev
 ## Network / LAN Access
 
 To allow access from other devices on the same network:
+### Option 1: Using Configured LAN Host (Recommended)
 
+Add to `backend/.env`:
+
+```env
+LAN_HOST=192.168.x.x
+```
+
+This automatically configures:
+- CORS to allow requests from `http://192.168.x.x:5173`
+- Sanctum to accept cookies from the LAN host
+
+### Option 2: Manual Command Line
 ```bash
 # Backend � bind to all interfaces
 php artisan serve --host=0.0.0.0 --port=8000
@@ -287,6 +307,8 @@ ATS/
 ## Roadmap
 
 - [x] Public application form with CV upload
+- [x] Drag-and-drop resume upload with preview
+- [x] Multi-step form with progress tracking
 - [x] Email notifications (submission + status changes)
 - [x] Admin login with Sanctum token auth
 - [x] Pipeline dashboard with HR notes
@@ -296,6 +318,8 @@ ATS/
 - [x] Users management
 - [x] Responsive UI (mobile to desktop)
 - [x] Rate limiting and security hardening
+- [x] Modal auto-scroll with smooth centering
+- [x] LAN/Network access support with CORS configuration
 - [ ] Excel / CSV export
 - [ ] Interview scheduling integration
 - [ ] HTTPS / SSL deployment

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth, useRole, PERMISSION_DEFAULTS } from '../context/AuthContext'
 import AdminLayout from '../components/AdminLayout'
@@ -74,6 +74,23 @@ export default function AdminUsersPage() {
   const [permSaving, setPermSaving]   = useState(false)
   const [permSuccess, setPermSuccess] = useState(null)
   const [permError, setPermError]     = useState(null)
+
+  // Modal refs for auto-scroll
+  const addEditModalRef = useRef(null)
+  const deleteModalRef = useRef(null)
+
+  // Auto-scroll to modal when it opens
+  useEffect(() => {
+    if (modalOpen && addEditModalRef.current) {
+      addEditModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [modalOpen])
+
+  useEffect(() => {
+    if (deleteTarget && deleteModalRef.current) {
+      deleteModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [deleteTarget])
 
   const displayPerms = localPerms ?? globalPerms ?? PERMISSION_DEFAULTS
 
@@ -322,7 +339,7 @@ export default function AdminUsersPage() {
 
       {/* ── Add / Edit Modal ── */}
       {modalOpen && createPortal(
-        <div className="um-backdrop" onClick={closeModal}>
+        <div ref={addEditModalRef} className="um-backdrop" onClick={closeModal}>
           <div className="um-modal" onClick={e => e.stopPropagation()}>
 
             <div className="um-modal-head">
@@ -430,7 +447,7 @@ export default function AdminUsersPage() {
 
       {/* ── Delete Modal ── */}
       {deleteTarget && createPortal(
-        <div className="um-backdrop" onClick={() => setDeleteTarget(null)}>
+        <div ref={deleteModalRef} className="um-backdrop" onClick={() => setDeleteTarget(null)}>
           <div className="um-modal um-del-modal" onClick={e => e.stopPropagation()}>
             <div className="um-del-head">
             <div className="um-del-icon">

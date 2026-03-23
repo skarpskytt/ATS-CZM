@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, useRole } from '../context/AuthContext'
@@ -118,6 +118,44 @@ function AdminApplicantsPage() {
   const [openDropdownId, setOpenDropdownId] = useState(null)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, above: false })
   const [viewTargetId, setViewTargetId]   = useState(null)
+
+  // Modal refs for auto-scroll
+  const deleteModalRef = useRef(null)
+  const forceModalRef = useRef(null)
+  const bulkDeleteModalRef = useRef(null)
+  const bulkRestoreModalRef = useRef(null)
+  const bulkForceModalRef = useRef(null)
+
+  // Auto-scroll to modal when it opens
+  useEffect(() => {
+    if (deleteTarget && deleteModalRef.current) {
+      deleteModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [deleteTarget])
+
+  useEffect(() => {
+    if (forceTarget && forceModalRef.current) {
+      forceModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [forceTarget])
+
+  useEffect(() => {
+    if (showBulkModal && bulkDeleteModalRef.current) {
+      bulkDeleteModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [showBulkModal])
+
+  useEffect(() => {
+    if (showBulkRestoreModal && bulkRestoreModalRef.current) {
+      bulkRestoreModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [showBulkRestoreModal])
+
+  useEffect(() => {
+    if (showBulkForceModal && bulkForceModalRef.current) {
+      bulkForceModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [showBulkForceModal])
   const [viewApplicant, setViewApplicant] = useState(null)
   const [viewNotes, setViewNotes]         = useState([])
   const [viewLoading, setViewLoading]     = useState(false)
@@ -1324,7 +1362,7 @@ function AdminApplicantsPage() {
       ), document.body)}
       {/* ── Archive confirmation modal ── */}
       {deleteTarget && (
-        <div className="del-modal-backdrop" onClick={() => !deleting && setDeleteTarget(null)}>
+        <div ref={deleteModalRef} className="del-modal-backdrop" onClick={() => !deleting && setDeleteTarget(null)}>
           <div className="del-modal" onClick={(e) => e.stopPropagation()}>
             <div className="del-modal-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -1359,7 +1397,7 @@ function AdminApplicantsPage() {
         </div>
       )}
       {forceTarget && (
-        <div className="del-modal-backdrop" onClick={() => !forcing && setForceTarget(null)}>
+        <div ref={forceModalRef} className="del-modal-backdrop" onClick={() => !forcing && setForceTarget(null)}>
           <div className="del-modal" onClick={(e) => e.stopPropagation()}>
             <div className="del-modal-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -1395,7 +1433,7 @@ function AdminApplicantsPage() {
       )}
       {/* ── Bulk archive confirmation modal ── */}
       {showBulkModal && (
-        <div className="del-modal-backdrop" onClick={() => !bulkDeleting && setShowBulkModal(false)}>
+        <div ref={bulkDeleteModalRef} className="del-modal-backdrop" onClick={() => !bulkDeleting && setShowBulkModal(false)}>
           <div className="del-modal" onClick={(e) => e.stopPropagation()}>
             <div className="del-modal-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -1430,7 +1468,7 @@ function AdminApplicantsPage() {
         </div>
       )}
       {showBulkRestoreModal && (
-        <div className="del-modal-backdrop" onClick={() => !bulkRestoring && setShowBulkRestoreModal(false)}>
+        <div ref={bulkRestoreModalRef} className="del-modal-backdrop" onClick={() => !bulkRestoring && setShowBulkRestoreModal(false)}>
           <div className="del-modal" onClick={(e) => e.stopPropagation()}>
             <div className="del-modal-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1465,7 +1503,7 @@ function AdminApplicantsPage() {
         </div>
       )}
       {showBulkForceModal && (
-        <div className="del-modal-backdrop" onClick={() => !bulkForcing && setShowBulkForceModal(false)}>
+        <div ref={bulkForceModalRef} className="del-modal-backdrop" onClick={() => !bulkForcing && setShowBulkForceModal(false)}>
           <div className="del-modal" onClick={(e) => e.stopPropagation()}>
             <div className="del-modal-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>

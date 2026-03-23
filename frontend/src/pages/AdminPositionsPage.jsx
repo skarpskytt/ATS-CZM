@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import AdminLayout from '../components/AdminLayout'
 
@@ -36,6 +36,23 @@ function AdminPositionsPage() {
 
   // Toggle loading
   const [togglingId, setTogglingId] = useState(null)
+
+  // Modal refs for auto-scroll
+  const addEditModalRef = useRef(null)
+  const deleteModalRef = useRef(null)
+
+  // Auto-scroll to modal when it opens
+  useEffect(() => {
+    if (modalOpen && addEditModalRef.current) {
+      addEditModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [modalOpen])
+
+  useEffect(() => {
+    if (deleteTarget && deleteModalRef.current) {
+      deleteModalRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [deleteTarget])
 
   const loadPositions = async (p = 1) => {
     setLoading(true)
@@ -319,7 +336,7 @@ function AdminPositionsPage() {
 
       {/* ── Add / Edit Modal ── */}
       {modalOpen && (
-        <div className="positions-modal-backdrop" onClick={closeModal}>
+        <div ref={addEditModalRef} className="positions-modal-backdrop" onClick={closeModal}>
           <div className="positions-modal" onClick={(e) => e.stopPropagation()}>
             <div className="positions-modal-head">
               <div className="positions-modal-head-icon">
@@ -423,7 +440,7 @@ function AdminPositionsPage() {
 
       {/* ── Delete Confirm Modal ── */}
       {deleteTarget && (
-        <div className="del-modal-backdrop" onClick={() => !deleting && setDeleteTarget(null)}>
+        <div ref={deleteModalRef} className="del-modal-backdrop" onClick={() => !deleting && setDeleteTarget(null)}>
           <div className="del-modal" onClick={(e) => e.stopPropagation()}>
             <div className="del-modal-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>

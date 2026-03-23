@@ -841,8 +841,9 @@ html, body {
 .terms-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 30, 20, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(10, 25, 15, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 9000;
   display: flex;
   align-items: center;
@@ -5151,8 +5152,9 @@ textarea {
 .positions-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 35, 25, 0.45);
-  backdrop-filter: blur(3px);
+  background: rgba(10, 25, 15, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
   align-items: center;
