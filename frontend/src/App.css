@@ -46,7 +46,7 @@ html, body {
   position: relative;
   overflow: hidden;
   border-radius: 36px;
-  border: 1px solid rgba(212, 175, 83, 0.52);
+  border: 8px solid #d4af53;
   background: #ffffff;
   padding: clamp(2rem, 4vw, 3.5rem);
   box-shadow: 0 28px 70px rgba(15, 61, 46, 0.14);
@@ -202,7 +202,7 @@ html, body {
 }
 
 .apply-card {
-  border: 1px solid rgba(200, 164, 65, 0.25);
+  border: 8px solid #d4af53;
   background: #ffffff;
   border-radius: 24px;
   box-shadow: 0 24px 64px rgba(15, 61, 46, 0.08), 0 4px 16px rgba(15, 61, 46, 0.04);
@@ -841,9 +841,8 @@ html, body {
 .terms-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 25, 15, 0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(10, 30, 20, 0.55);
+  backdrop-filter: blur(3px);
   z-index: 9000;
   display: flex;
   align-items: center;
@@ -5152,9 +5151,8 @@ textarea {
 .positions-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 25, 15, 0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(15, 35, 25, 0.45);
+  backdrop-filter: blur(3px);
   z-index: 1000;
   display: flex;
   align-items: center;

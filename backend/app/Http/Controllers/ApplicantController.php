@@ -450,19 +450,10 @@ class ApplicantController extends Controller
 
         $applicant = Applicant::create($data);
 
-        if ($sendNotifications) {
-            $recipients = User::query()
-                ->whereIn('role', ['admin', 'recruiter'])
-                ->get();
-
-            if ($recipients->isNotEmpty()) {
-                Notification::send($recipients, new ApplicantSubmitted($applicant));
-            }
-
-            if ($applicant->email_address) {
-                Notification::route('mail', $applicant->email_address)
-                    ->notify(new ApplicantSubmissionReceived($applicant));
-            }
+        if ($sendNotifications && $applicant->email_address) {
+            // Send confirmation email to applicant
+            Notification::route('mail', $applicant->email_address)
+                ->notify(new ApplicantSubmissionReceived($applicant));
         }
 
         return $applicant;
