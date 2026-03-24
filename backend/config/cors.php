@@ -16,13 +16,15 @@ return [
 
     'allowed_origins' => array_filter([
         env('FRONTEND_URL'),
-        // Allow localhost variants during development
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
     ]),
 
-    // Allow LAN access (e.g. http://192.168.x.x:5173)
-    'allowed_origins_patterns' => ['#^http://192\.168\.\d+\.\d+:5173$#'],
+    // Allow Vite dev ports (517x) for localhost and common LAN ranges.
+    'allowed_origins_patterns' => [
+        '#^http://localhost:517\d$#',
+        '#^http://127\.0\.0\.1:517\d$#',
+        '#^http://192\.168\.\d+\.\d+:517\d$#',
+        '#^http://10\.\d+\.\d+\.\d+:517\d$#',
+    ],
 
     'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 

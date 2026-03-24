@@ -14,8 +14,8 @@ class CheckPermission
      */
     private const DEFAULTS = [
         'canEdit'            => ['admin', 'hr_manager', 'hr_supervisor'],
-        'canDelete'          => ['admin'],
-        'canManagePositions' => ['admin'],
+        'canDelete'          => ['admin', 'hr_manager', 'hr_supervisor'],
+        'canManagePositions' => ['admin', 'hr_manager', 'hr_supervisor'],
         'canViewAnalytics'   => ['admin', 'hr_manager', 'hr_supervisor'],
         'canManageUsers'     => ['admin'],
     ];
