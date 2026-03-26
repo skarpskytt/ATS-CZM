@@ -56,6 +56,9 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        Applicant::factory(10)->create();
+        // Seed 20 random positions
+        $this->call(PositionSeeder::class);
+
+        Applicant::factory(200)->create();
     }
 }
