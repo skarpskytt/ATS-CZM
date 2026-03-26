@@ -1,3 +1,407 @@
+  .admin-nav-logo {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    margin-bottom: 0.3rem;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 2px 8px #c8a44122;
+  }
+  .admin-nav-title {
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.7rem;
+    text-transform: uppercase;
+    text-align: center;
+    text-shadow: 0 2px 8px #b89d3a44;
+  }
+  .admin-nav-role {
+    font-size: 0.98rem;
+    color: #fff9;
+    font-weight: 400;
+    margin-bottom: 0.2rem;
+    text-align: center;
+  }
+@media (max-width: 600px) {
+  .admin-nav {
+    border-top-left-radius: 28px;
+    border-bottom-left-radius: 18px;
+    overflow: hidden;
+    background: #f8f8f4;
+    box-shadow: 0 8px 32px rgba(10,30,22,0.13), -2px 0 32px rgba(10,30,22,0.10);
+    color: #222;
+    border-right: 1.5px solid #e2c97a33;
+  }
+  .admin-nav-header {
+    width: 100%;
+    background: #c8a441;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.1rem 1.2rem 0.7rem 1.2rem;
+    border-bottom-left-radius: 28px;
+    border-bottom-right-radius: 28px;
+    margin-bottom: 0.7rem;
+    position: relative;
+    box-shadow: 0 2px 12px #c8a44122;
+  }
+    .admin-nav-divider {
+      width: 90%;
+      height: 1.5px;
+      background: linear-gradient(90deg, #e2c97a33 0%, #f8f8f4 100%);
+      margin: 0.7rem auto 1.1rem auto;
+      border: none;
+      border-radius: 2px;
+    }
+  .admin-nav-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #c8a441;
+    margin-bottom: 0.3rem;
+    box-shadow: 0 2px 8px #c8a44122;
+    border: 2px solid #fff;
+  }
+  .admin-nav-username {
+    font-size: 1.18rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.1rem;
+    text-shadow: 0 2px 8px #b89d3a44;
+  }
+  .admin-nav-subtitle {
+    font-size: 0.98rem;
+    color: #fff9;
+    font-weight: 400;
+    margin-bottom: 0.2rem;
+    text-align: center;
+  }
+  .admin-nav-section {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #b6b6a8;
+    margin: 1.1rem 0 0.3rem 0.1rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .admin-nav-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-bottom: 1.2rem;
+  }
+  .admin-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    font-size: 1.08rem;
+    font-weight: 600;
+    color: #222;
+    background: none;
+    border: none;
+    border-radius: 12px;
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 0.1rem;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+    box-shadow: 0 1px 0 #e2c97a11;
+  }
+  .admin-nav-link.active, .admin-nav-link:active {
+    background: #f7f5e9;
+    color: #c8a441;
+    box-shadow: 0 2px 8px #e2c97a22;
+  }
+  .admin-nav-link svg {
+    font-size: 1.25em;
+    color: #c8a441;
+  }
+  .admin-nav-logout {
+    width: 100%;
+    margin: 1.2rem 0 0.7rem 0;
+    padding: 0.8rem 0;
+    background: #fff6f4;
+    color: #e74c3c;
+    border: 1.5px solid #fbeee6;
+    border-radius: 8px;
+    font-size: 1.08rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-align: center;
+    outline: none;
+    transition: background 0.15s, color 0.15s, border 0.15s;
+    box-shadow: 0 1px 0 #e2c97a11;
+  }
+  .admin-nav-logout:active, .admin-nav-logout:focus {
+    background: #fbeee6;
+    color: #c0392b;
+    border: 1.5px solid #e2c97a;
+  }
+  .admin-nav-bottom-row {
+    width: 100%;
+    display: flex;
+    gap: 0.7rem;
+    justify-content: center;
+    margin-top: 1.2rem;
+  }
+  .admin-nav-bottom-btn {
+    flex: 1 1 0;
+    padding: 0.7rem 0.2rem;
+    border-radius: 8px;
+    font-size: 1.01rem;
+    font-weight: 700;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .admin-nav-bottom-btn.pro {
+    background: #b6c441;
+    color: #fff;
+  }
+  .admin-nav-bottom-btn.rate {
+    background: #f7f5e9;
+    color: #b6b6a8;
+    border: 1.5px solid #e2c97a;
+  }
+}
+/* ── Admin Avatar/Profile Improvements ── */
+.admin-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #176a4d 60%, #c8a441 100%);
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(15, 61, 46, 0.08);
+  margin-right: 0.7rem;
+  letter-spacing: 0.02em;
+  border: 2.5px solid #fff;
+}
+.admin-avatar-lg {
+  width: 54px;
+  height: 54px;
+  font-size: 2rem;
+  margin: 0 0 0.7rem 0;
+  border-width: 3.5px;
+}
+.admin-nav-profile {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  margin-bottom: 1.2rem;
+}
+@media (max-width: 900px) {
+  .admin-profile {
+    display: none !important;
+  }
+  .admin-nav-profile {
+    display: flex;
+  }
+  .admin-topbar-inner {
+    display: flex;
+    align-items: center;
+  }
+  .admin-burger {
+    margin-left: auto;
+  }
+  .admin-nav-logout {
+    width: 100%;
+    margin-top: 1.2rem;
+    padding: 0.7rem 0;
+    background: #176a4d;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 8px rgba(15, 61, 46, 0.10);
+    transition: background 0.18s, color 0.15s, box-shadow 0.18s;
+    text-align: center;
+    outline: none;
+  }
+  .admin-nav-logout:active,
+  .admin-nav-logout:focus {
+    background: #0f3d2e;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(15, 61, 46, 0.13);
+  }
+}
+/* ── Improved Admin Mobile Nav Overlay & Animation ── */
+/* Limit overlay to only cover the nav/topbar area, not the whole page */
+.admin-nav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100%;
+  max-height: 100dvh;
+  background: rgba(10, 30, 22, 0.55);
+  z-index: 19;
+  animation: fadeIn 0.2s;
+  pointer-events: auto;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (max-width: 900px) {
+  .admin-nav {
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1), opacity 0.2s;
+    transform: translateY(-30px);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .admin-nav.is-open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .admin-nav a {
+    font-size: 1.15rem;
+    padding: 0.9rem 0 0.9rem 0.2rem;
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: 0.2rem;
+    background: none;
+    color: #c8d8c0;
+    transition: background 0.15s, color 0.15s;
+  }
+  .admin-nav a.active {
+    background: #176a4d;
+    color: #fff;
+  }
+  .admin-nav a:active {
+    background: #0f3d2e;
+    color: #fff;
+  }
+}
+/* ── Admin Burger Menu ── */
+.admin-burger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 38px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 1.5rem;
+  z-index: 30;
+}
+.admin-burger span {
+  display: block;
+  width: 26px;
+  height: 3px;
+  background: #c8d8c0;
+  margin: 3px 0;
+  border-radius: 2px;
+  transition: all 0.25s;
+}
+.admin-burger.is-open span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+.admin-burger.is-open span:nth-child(2) {
+  opacity: 0;
+}
+.admin-burger.is-open span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+@media (max-width: 900px) {
+  .admin-burger {
+    display: flex;
+  }
+  .admin-nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100dvh;
+    width: 82vw;
+    max-width: 340px;
+    background: #0a1e16;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.2rem 1.2rem 1.5rem 1.2rem;
+      .admin-nav-header {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 1.1rem;
+        gap: 0.2rem;
+      }
+      .admin-nav-company {
+        font-size: 1.08rem;
+        font-weight: 700;
+        color: #e2c97a;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.1rem;
+        text-transform: uppercase;
+      }
+      .admin-nav-version {
+        font-size: 0.93rem;
+        color: #b6b6a8;
+        font-weight: 500;
+        margin-bottom: 0.2rem;
+        letter-spacing: 0.04em;
+      }
+      .admin-nav-divider {
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(90deg, #c8a44122 0%, #0a1e16 100%);
+        margin: 0.7rem 0 1.1rem 0;
+        border: none;
+      }
+      .admin-nav-profile {
+        margin-bottom: 0.7rem;
+      }
+      .admin-nav a {
+        font-weight: 600;
+      }
+    gap: 1.2rem;
+    z-index: 30;
+    display: none;
+    box-shadow: -2px 0 32px rgba(10,30,22,0.18);
+    border-top-left-radius: 18px;
+    border-bottom-left-radius: 18px;
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1), opacity 0.2s;
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .admin-nav.is-open {
+    display: flex;
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Blur effect for page content when nav is open */
+  .admin-blur {
+    filter: blur(6px) brightness(0.92);
+    transition: filter 0.2s;
+    pointer-events: none;
+    user-select: none;
+  }
+  .admin-topbar-inner {
+    position: relative;
+  }
+}
 @config "../tailwind.config.js";
 @import "tailwindcss";
 @plugin "daisyui";
@@ -8,6 +412,7 @@ html, body {
   max-width: 100vw;
 }
 
+
 .page {
   max-width: 1120px;
   margin: 0 auto;
@@ -15,12 +420,31 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
+  min-height: 100vh;
 }
 
 .page-admin {
   max-width: 100%;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.admin-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.admin-content {
+  flex: 1 0 auto;
+}
+
+.page > main,
+.page-admin > main {
+  flex: 1 0 auto;
 }
 
 .page-apply {
