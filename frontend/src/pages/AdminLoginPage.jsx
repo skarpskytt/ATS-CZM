@@ -3,16 +3,8 @@ import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { apiBase } from '../utils/apiBase'
 
-// ─── To add your own image or GIF: ───────────────────────────────────────────
-//  Option A (recommended): Drop the file in frontend/public/ and reference it
-//    as a plain string, e.g. heroImage = '/banner.gif'
-//  Option B: Drop the file in frontend/src/assets/ and import it:
-//    import heroImage from '../assets/banner.gif'
-//  Then pass heroImage as the `src` of the <img> below where indicated.
-//  To hide the visual panel entirely, set SHOW_VISUAL_PANEL to false.
-// ─────────────────────────────────────────────────────────────────────────────
-const HERO_IMAGE = null          // e.g. '/banner.gif' or imported asset
-const SHOW_VISUAL_PANEL = true   // set false to hide the left panel
+const HERO_IMAGE = null
+const SHOW_VISUAL_PANEL = true
 
 const FEATURES = [
   { icon: '📋', label: 'Applicant Tracking',  desc: 'Monitor every candidate through the full hiring pipeline.' },

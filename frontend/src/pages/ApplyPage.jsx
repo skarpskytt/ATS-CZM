@@ -111,6 +111,7 @@ function ApplyPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [furthestStepReached, setFurthestStepReached] = useState(1)
   const [dragOver, setDragOver] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const formRef = useRef(null)
 
   const totalSteps = formSteps.length
@@ -339,6 +340,7 @@ function ApplyPage() {
       }
 
       setMessage('Your application has been submitted. We will update you after review through email.')
+      setSubmitted(true)
       setForm(initialForm)
       setCustomGender('')
       setCustomVacancySource('')
@@ -346,8 +348,6 @@ function ApplyPage() {
       setHoneypotWebsite('')
       setFormStartedAt(Date.now())
       setTermsAccepted(false)
-      setCurrentStep(1)
-      setFurthestStepReached(1)
     } catch (err) {
       setError('Network error. Please try again in a moment.')
     } finally {
@@ -452,7 +452,32 @@ function ApplyPage() {
               </div>
             </div>
 
-            {currentStep === 1 ? (
+            {submitted ? (
+            <div className="form-section apply-success-section" style={{ '--delay': '0ms' }}>
+              <div className="apply-success-card">
+                <div className="apply-success-icon">✓</div>
+                <h2 className="apply-success-title">Application Submitted!</h2>
+                <p className="apply-success-message">
+                  Thank you for applying. We have received your application and will review it shortly.
+                  You will receive updates via email.
+                </p>
+                <button
+                  type="button"
+                  className="btn apply-success-btn"
+                  onClick={() => {
+                    setSubmitted(false)
+                    setMessage(null)
+                    setCurrentStep(1)
+                    setFurthestStepReached(1)
+                  }}
+                >
+                  Submit Another Application
+                </button>
+              </div>
+            </div>
+            ) : null}
+
+            {!submitted && currentStep === 1 ? (
             <div className="form-section" style={{ '--delay': '0ms' }}>
               <div className="divider apply-divider">Resume</div>
               <div className="resume-first-card">
@@ -502,7 +527,7 @@ function ApplyPage() {
             </div>
             ) : null}
 
-            {currentStep === 2 ? (
+            {!submitted && currentStep === 2 ? (
             <div className="form-section" style={{ '--delay': '0ms' }}>
               <div className="divider apply-divider">Position &amp; Identity</div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -640,7 +665,7 @@ function ApplyPage() {
             </div>
             ) : null}
 
-            {currentStep === 3 ? (
+            {!submitted && currentStep === 3 ? (
             <div className="form-section" style={{ '--delay': '80ms' }}>
               <div className="divider apply-divider">Education</div>
               <div className="grid gap-4 lg:grid-cols-2">
@@ -725,7 +750,7 @@ function ApplyPage() {
             </div>
             ) : null}
 
-            {currentStep === 4 ? (
+            {!submitted && currentStep === 4 ? (
             <div className="form-section" style={{ '--delay': '160ms' }}>
               <div className="divider apply-divider">Contact</div>
               <div className="grid gap-4 lg:grid-cols-2">
@@ -802,7 +827,7 @@ function ApplyPage() {
             </div>
             ) : null}
 
-            {currentStep === 5 ? (
+            {!submitted && currentStep === 5 ? (
             <div className="form-section" style={{ '--delay': '240ms' }}>
               <div className="divider apply-divider">Review your application</div>
               <p className="review-intro">Please verify your details below. You can edit any section by clicking the link.</p>

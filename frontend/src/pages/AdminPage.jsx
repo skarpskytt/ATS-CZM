@@ -315,6 +315,7 @@ function AdminPage() {
 
         return remaining
       })
+      setTotal((prev) => prev - 1)
       setDeleteTarget(null)
     } catch {
       setAdminError('Failed to archive applicant.')
