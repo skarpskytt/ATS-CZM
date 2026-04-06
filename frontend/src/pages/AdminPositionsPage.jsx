@@ -399,49 +399,124 @@ function AdminPositionsPage() {
       </div>
 
       {/* ── Add / Edit Modal ── */}
-      {modalOpen && (
-        <div ref={addEditModalRef} className="positions-modal-backdrop" onClick={closeModal}>
-          <div className="positions-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="positions-modal-head">
-              <div className="positions-modal-head-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      {modalOpen && createPortal(
+        <div ref={addEditModalRef} className="pos-backdrop" onClick={closeModal}>
+          <div className="pos-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pos-modal-head">
+              <div className="pos-modal-head-icon">
+                {editing ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                )}
               </div>
-              <div>
-                <h3>{editing ? 'Edit position' : 'New position'}</h3>
-                <p>{editing ? 'Update the details for this opening.' : 'Fill in the details for the new job opening.'}</p>
+              <div className="pos-modal-head-text">
+                <h3>{editing ? 'Edit Position' : 'Add New Position'}</h3>
+                <p>{editing ? 'Update the details for this job opening.' : 'Create a new job opening for applicants.'}</p>
               </div>
-              <button type="button" className="positions-modal-close" onClick={closeModal}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <button type="button" className="pos-close" onClick={closeModal}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <form className="positions-form" onSubmit={handleSave}>
-              <div className="positions-form-row">
-                <label>
-                  <span>Job title *</span>
-                  <input
-                    name="title"
-                    value={form.title}
+
+            <form onSubmit={handleSave}>
+              <div className="pos-modal-body">
+                {formError && <div className="pos-inline pos-inline-err" style={{ marginBottom:'1.25rem' }}>⚠ {formError}</div>}
+
+                <div className="pos-field-row">
+                  <div className="pos-field">
+                    <label className="pos-label">Job Title <span className="pos-req">*</span></label>
+                    <input
+                      className="pos-input"
+                      name="title"
+                      value={form.title}
+                      onChange={handleChange}
+                      required
+                      placeholder="e.g. Software Engineer"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="pos-field">
+                    <label className="pos-label">Location <span className="pos-req">*</span></label>
+                    <input
+                      className="pos-input"
+                      name="location"
+                      value={form.location}
+                      onChange={handleChange}
+                      required
+                      placeholder="e.g. Manila, Philippines"
+                    />
+                  </div>
+                </div>
+
+                <div className="pos-field">
+                  <label className="pos-label">Description</label>
+                  <textarea
+                    className="pos-input"
+                    name="description"
+                    value={form.description}
                     onChange={handleChange}
-                    required
-                    placeholder="e.g. Software Engineer"
-                    className="input input-bordered"
+                    placeholder="Describe the role and responsibilities..."
+                    rows={4}
                   />
-                </label>
-                <label>
-                  <span>Location *</span>
-                  <input
-                    name="location"
-                    value={form.location}
-                    onChange={handleChange}
-                    required
-                  />
+                </div>
+
+                <div className="pos-field-row">
+                  <div className="pos-field">
+                    <label className="pos-label">Minimum Salary (₱)</label>
+                    <input
+                      className="pos-input"
+                      name="salary_min"
+                      value={form.salary_min}
+                      onChange={handleChange}
+                      type="number"
+                      min="0"
+                      placeholder="30000"
+                    />
+                  </div>
+                  <div className="pos-field">
+                    <label className="pos-label">Maximum Salary (₱)</label>
+                    <input
+                      className="pos-input"
+                      name="salary_max"
+                      value={form.salary_max}
+                      onChange={handleChange}
+                      type="number"
+                      min="0"
+                      placeholder="50000"
+                    />
+                  </div>
+                </div>
+
+                <label className="pos-toggle-label">
+                  <div className={`pos-toggle ${form.is_active ? 'pos-toggle-on' : ''}`}>
+                    <input
+                      type="checkbox"
+                      name="is_active"
+                      checked={form.is_active}
+                      onChange={handleChange}
+                      style={{ display: 'none' }}
+                    />
+                    <span className="pos-track"><span className="pos-thumb" /></span>
+                  </div>
+                  <span style={{ fontWeight: 500, color: '#1f2937' }}>Active (visible to applicants)</span>
                 </label>
               </div>
-              {/* ...existing code... */}
+
+              <div className="pos-modal-foot">
+                <button type="button" className="pos-ghost-btn" onClick={closeModal} disabled={saving}>Cancel</button>
+                <button type="submit" className="pos-add-btn" disabled={saving}>
+                  {saving ? (
+                    <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Saving…</>
+                  ) : (
+                    <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>{editing ? 'Save Changes' : 'Create Position'}</>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         </div>
-      )}
+      , document.body)}
 
 
       {/* ── Delete Confirm Modal ── */}

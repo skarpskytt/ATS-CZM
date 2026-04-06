@@ -149,13 +149,7 @@ export default function AdminLayout({ children, pageTitle }) {
                   Audit Logs
                 </NavLink>
               )}
-              <button
-                type="button"
-                className="admin-nav-logout"
-                onClick={() => { setNavOpen(false); logout(); }}
-              >
-                Logout
-              </button>
+              
             </nav>
           )}
           <div className="admin-profile">

@@ -674,7 +674,7 @@ function AdminPage() {
         <div className="admin-card-head">
           <div>
             <h2>{viewMode === 'active' ? 'Applicants' : 'Archived Applicants'}</h2>
-            <p>{total} {viewMode === 'archived' ? 'archived ' : ''}applicant{total !== 1 ? 's' : ''} · Signed in as {user?.name || 'User'} ({user?.role || 'recruiter'})</p>
+            <p>{total} {viewMode === 'archived' ? 'archived ' : ''}applicant{total !== 1 ? 's' : ''} · Signed in as {user?.name || 'User'}</p>
             <span className={`admin-mode-pill admin-mode-pill-${viewMode}`}>
               {viewMode === 'archived' ? 'Archive View' : 'Active View'}
             </span>

@@ -28,13 +28,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('applicants/{applicantId}/timeline', [AuditLogController::class, 'applicantTimeline']);
     Route::post('applicants/{applicant}/notes', [ApplicantNoteController::class, 'store']);
 
-    // create / edit - dynamic permission: canEdit
+    // create / edit - dynamic permission: canEdit (with rate limiting on CV uploads)
     Route::post('applicants', [ApplicantController::class, 'store'])
-        ->middleware('perm:canEdit');
+        ->middleware(['perm:canEdit', 'throttle:5,1']);
     Route::put('applicants/{applicant}', [ApplicantController::class, 'update'])
-        ->middleware('perm:canEdit');
+        ->middleware(['perm:canEdit', 'throttle:10,1']);
     Route::patch('applicants/{applicant}', [ApplicantController::class, 'update'])
-        ->middleware('perm:canEdit');
+        ->middleware(['perm:canEdit', 'throttle:10,1']);
 
     // delete - dynamic permission: canDelete
     Route::delete('applicants', [ApplicantController::class, 'bulkDestroy'])

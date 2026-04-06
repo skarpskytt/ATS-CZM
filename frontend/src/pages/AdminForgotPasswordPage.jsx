@@ -37,132 +37,132 @@ function AdminForgotPasswordPage() {
   }
 
   return (
-    <div className="fp-shell">
-      {/* Left visual panel */}
-      <div className="fp-visual">
-        <div className="fp-orb fp-orb-1" />
-        <div className="fp-orb fp-orb-2" />
-        <div className="fp-visual-content">
-          <div className="fp-logo-wrap">
-            <img src="/logoczark.png" alt="Czark Mak" className="fp-logo" />
-          </div>
-          <h2 className="fp-visual-title">Forgot your password?</h2>
-          <p className="fp-visual-sub">No worries — enter your email and we'll send you a secure reset link right away.</p>
-          <ul className="fp-tips">
-            <li><span className="fp-tip-icon">📧</span> Check your inbox after submitting</li>
-            <li><span className="fp-tip-icon">⏱</span> Link expires after 60 minutes</li>
-            <li><span className="fp-tip-icon">🔒</span> Only works once per request</li>
-            <li><span className="fp-tip-icon">🔍</span> Check spam folder if not received</li>
-          </ul>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#0f3d2e'
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '360px',
+        padding: '32px',
+        backgroundColor: '#fff',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <img src="/logoczark.png" alt="Czark Mak Corporation" style={{ width: '60px', height: '60px', marginBottom: '16px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+          <h1 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 4px 0' }}>Forgot Password?</h1>
+          <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>Enter your email to receive a reset link</p>
         </div>
-      </div>
 
-      {/* Right form panel */}
-      <div className="fp-form-panel">
-        <div className="fp-form-wrap">
-          {sent ? (
-            <div className="fp-success-state">
-              <div className="fp-success-icon-wrapper">
-                <div className="fp-success-icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-                  </svg>
-                </div>
-              </div>
-              <h2 className="fp-success-title">Check your inbox!</h2>
-              <p className="fp-success-text">
-                We sent a password reset link to <strong>{email}</strong>.<br />
-                It may take a minute to arrive — check your spam folder too.
-              </p>
-              <div className="fp-resend-wrap">
-                <span className="fp-resend-hint">Didn't get the email?</span>
-                <button
-                  type="button"
-                  className="fp-resend-btn"
-                  onClick={() => { setSent(false); setError(null) }}
-                >
-                  Try again
-                </button>
-              </div>
-              <NavLink to="/admin/login" className="fp-back-link">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
-                </svg>
-                Back to Sign In
+        {sent ? (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              margin: '0 auto 16px',
+              backgroundColor: '#dcfce7',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Check your inbox</h2>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+              We sent a reset link to <strong>{email}</strong>
+            </p>
+            <button
+              type="button"
+              onClick={() => { setSent(false); setError(null) }}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#fff',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                marginBottom: '16px'
+              }}
+            >
+              Try again
+            </button>
+            <div>
+              <NavLink to="/admin/login" style={{ fontSize: '14px', color: '#2563eb', textDecoration: 'none' }}>
+                ← Back to Sign In
               </NavLink>
             </div>
-          ) : (
-            <>
-              <div className="fp-form-header">
-                <div className="fp-form-icon-wrapper">
-                  <div className="fp-form-icon">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                    </svg>
-                  </div>
-                </div>
-                <h1 className="fp-form-title">Reset Password</h1>
-                <p className="fp-form-sub">Enter your account email and we'll send you a reset link.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#fee2e2',
+                border: '1px solid #fecaca',
+                borderRadius: '6px',
+                color: '#dc2626',
+                fontSize: '14px',
+                marginBottom: '16px'
+              }}>
+                {error}
               </div>
+            )}
 
-              <form onSubmit={handleSubmit} className="fp-form">
-                <div className="fp-field">
-                  <label className="fp-label" htmlFor="fp-email">
-                    Email address
-                    <span className="fp-required">*</span>
-                  </label>
-                  <div className="fp-input-wrap">
-                    <svg className="fp-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                    </svg>
-                    <input
-                      id="fp-email"
-                      className="fp-input"
-                      type="email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="you@czarkmak.com"
-                      required
-                      autoFocus
-                    />
-                  </div>
-                </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>
+                Email address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                required
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
 
-                {error && (
-                  <div className="fp-alert fp-alert-error" role="alert">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    {error}
-                  </div>
-                )}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: loading ? '#9ca3af' : '#0f3d2e',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                marginBottom: '16px'
+              }}
+            >
+              {loading ? 'Sending...' : 'Send Reset Link'}
+            </button>
 
-                <button type="submit" className="fp-submit" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <span className="fp-spinner" aria-hidden="true" />
-                      Sending link...
-                    </>
-                  ) : (
-                    <>
-                      Send Reset Link
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-                      </svg>
-                    </>
-                  )}
-                </button>
-
-                <NavLink to="/admin/login" className="fp-back-link">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
-                  </svg>
-                  Back to Sign In
-                </NavLink>
-              </form>
-            </>
-          )}
-        </div>
+            <div style={{ textAlign: 'center' }}>
+              <NavLink to="/admin/login" style={{ fontSize: '14px', color: '#166534', textDecoration: 'none' }}>
+                ← Back to Sign In
+              </NavLink>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   )

@@ -276,8 +276,10 @@ VITE_API_BASE_URL=http://192.168.x.x:8000
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | `admin@example.com` | `password` |
-| Recruiter | `recruiter@example.com` | `password` |
+| Admin | `admin@example.com` | `Admin@2026Secure!` |
+| Recruiter | `recruiter@example.com` | `Recruit@2026Secure!` |
+
+> **Security Note:** Change these passwords in production environments.
 
 ---
 

@@ -8,3 +8,21 @@ Thumbs.db
 
 # Root-level env
 .env
+/backend/.env
+/frontend/.env
+
+# Dependencies
+node_modules/
+backend/vendor/
+
+# Build outputs
+backend/storage/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
