@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth, useRole } from '../context/AuthContext'
 import AdminLayout from '../components/AdminLayout'
 import ApplicantTimeline from '../components/ApplicantTimeline'
@@ -83,26 +83,30 @@ const safeValue = (value) => value === null || value === undefined || value === 
 
 function AdminApplicantsPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { token, user } = useAuth()
   const { canEdit, canDelete } = useRole()
+
+  // Initialize filters from URL params
+  const getParam = (key, defaultValue = '') => searchParams.get(key) ?? defaultValue
 
   const [applicants, setApplicants]       = useState([])
   const [loading, setLoading]             = useState(false)
   const [error, setError]                 = useState(null)
-  const [searchTerm, setSearchTerm]       = useState('')
-  const [statusFilter, setStatusFilter]   = useState('')
-  const [positionFilter, setPositionFilter] = useState('')
-  const [startDate, setStartDate]         = useState('')
-  const [endDate, setEndDate]             = useState('')
-  const [page, setPage]                   = useState(1)
+  const [searchTerm, setSearchTerm]       = useState(() => getParam('search', ''))
+  const [statusFilter, setStatusFilter]   = useState(() => getParam('status', ''))
+  const [positionFilter, setPositionFilter] = useState(() => getParam('position', ''))
+  const [startDate, setStartDate]         = useState(() => getParam('start_date', ''))
+  const [endDate, setEndDate]             = useState(() => getParam('end_date', ''))
+  const [page, setPage]                   = useState(() => parseInt(getParam('page', '1'), 10) || 1)
   const [lastPage, setLastPage]           = useState(1)
   const [total, setTotal]                 = useState(0)
   const [positions, setPositions]         = useState([])
-  const [sort, setSort]                   = useState('status')
-  const [direction, setDirection]         = useState('asc')
-  const [viewMode, setViewMode]           = useState('active')
+  const [sort, setSort]                   = useState(() => getParam('sort', 'status'))
+  const [direction, setDirection]         = useState(() => getParam('direction', 'asc'))
+  const [viewMode, setViewMode]           = useState(() => getParam('view', 'active'))
   const [updatingId, setUpdatingId]       = useState(null)
-  const [perPage, setPerPage]             = useState(20)
+  const [perPage, setPerPage]             = useState(() => parseInt(getParam('per_page', '20'), 10) || 20)
   const [deleteTarget, setDeleteTarget]   = useState(null)   // { id, name }
   const [deleting, setDeleting]           = useState(false)
   const [forceTarget, setForceTarget]     = useState(null)   // { id, name }
@@ -117,6 +121,22 @@ function AdminApplicantsPage() {
   const [openDropdownId, setOpenDropdownId] = useState(null)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, above: false })
   const [viewTargetId, setViewTargetId]   = useState(null)
+
+  // Advanced filters - also initialized from URL
+  const [showAdvanced, setShowAdvanced] = useState(() => {
+    // Open advanced panel if any advanced filter is set in URL
+    const hasAdvancedFilter = ['gender', 'education', 'vacancy_source', 'location', 'salary_min', 'salary_max', 'experience_min', 'experience_max', 'age_range'].some(k => getParam(k))
+    return hasAdvancedFilter
+  })
+  const [genderFilter, setGenderFilter]       = useState(() => getParam('gender', ''))
+  const [educationFilter, setEducationFilter] = useState(() => getParam('education', ''))
+  const [vacancyFilter, setVacancyFilter]     = useState(() => getParam('vacancy_source', ''))
+  const [locationFilter, setLocationFilter]   = useState(() => getParam('location', ''))
+  const [salaryMin, setSalaryMin]             = useState(() => getParam('salary_min', ''))
+  const [salaryMax, setSalaryMax]             = useState(() => getParam('salary_max', ''))
+  const [experienceMin, setExperienceMin]     = useState(() => getParam('experience_min', ''))
+  const [experienceMax, setExperienceMax]     = useState(() => getParam('experience_max', ''))
+  const [ageRangeFilter, setAgeRangeFilter]   = useState(() => getParam('age_range', ''))
 
   // Modal refs for auto-scroll
   const deleteModalRef = useRef(null)
@@ -159,18 +179,6 @@ function AdminApplicantsPage() {
   const [viewNotes, setViewNotes]         = useState([])
   const [viewLoading, setViewLoading]     = useState(false)
   const [viewError, setViewError]         = useState(null)
-
-  // Advanced filters
-  const [showAdvanced, setShowAdvanced]       = useState(false)
-  const [genderFilter, setGenderFilter]       = useState('')
-  const [educationFilter, setEducationFilter] = useState('')
-  const [vacancyFilter, setVacancyFilter]     = useState('')
-  const [locationFilter, setLocationFilter]   = useState('')
-  const [salaryMin, setSalaryMin]             = useState('')
-  const [salaryMax, setSalaryMax]             = useState('')
-  const [experienceMin, setExperienceMin]     = useState('')
-  const [experienceMax, setExperienceMax]     = useState('')
-  const [ageRangeFilter, setAgeRangeFilter]   = useState('')
 
   const AGE_RANGE_BOUNDS = {
     below_30:   { ageMin: undefined, ageMax: 29 },
@@ -566,12 +574,49 @@ function AdminApplicantsPage() {
     setExperienceMin('')
     setExperienceMax('')
     setAgeRangeFilter('')
+    setSearchParams({})
   }
 
   useEffect(() => {
     if (!token) return
     loadPositions(token)
   }, [token])
+
+  // Sync URL params when filters change
+  useEffect(() => {
+    const params = new URLSearchParams()
+
+    if (searchTerm) params.set('search', searchTerm)
+    if (statusFilter) params.set('status', statusFilter)
+    if (positionFilter) params.set('position', positionFilter)
+    if (startDate) params.set('start_date', startDate)
+    if (endDate) params.set('end_date', endDate)
+    if (page > 1) params.set('page', String(page))
+    if (sort) params.set('sort', sort)
+    if (direction) params.set('direction', direction)
+    if (viewMode !== 'active') params.set('view', viewMode)
+    if (perPage !== 20) params.set('per_page', String(perPage))
+
+    // Advanced filters
+    if (genderFilter) params.set('gender', genderFilter)
+    if (educationFilter) params.set('education', educationFilter)
+    if (vacancyFilter) params.set('vacancy_source', vacancyFilter)
+    if (locationFilter) params.set('location', locationFilter)
+    if (salaryMin) params.set('salary_min', salaryMin)
+    if (salaryMax) params.set('salary_max', salaryMax)
+    if (experienceMin) params.set('experience_min', experienceMin)
+    if (experienceMax) params.set('experience_max', experienceMax)
+    if (ageRangeFilter) params.set('age_range', ageRangeFilter)
+
+    // Use replace: true to not create a new history entry on every keystroke
+    setSearchParams(params, { replace: true })
+  }, [
+    searchTerm, statusFilter, positionFilter, startDate, endDate,
+    page, sort, direction, viewMode, perPage,
+    genderFilter, educationFilter, vacancyFilter, locationFilter,
+    salaryMin, salaryMax, experienceMin, experienceMax, ageRangeFilter,
+    setSearchParams
+  ])
 
   useEffect(() => {
     setPage(1)

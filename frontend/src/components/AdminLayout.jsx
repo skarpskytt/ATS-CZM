@@ -176,7 +176,7 @@ export default function AdminLayout({ children, pageTitle }) {
       </div>
 
       <footer className={navOpen ? "admin-footer admin-blur" : "admin-footer"}>
-        <p>© {new Date().getFullYear()} Czark Mak Corporation · ATS v2.0 · Internal use only</p>
+        <p>© {new Date().getFullYear()} Czark Mak Corporation · ATS</p>
       </footer>
     </section>
   )
