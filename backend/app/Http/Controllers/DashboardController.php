@@ -17,7 +17,9 @@ class DashboardController extends Controller
             : Applicant::query();
 
         $total       = $query()->count();
-        $recentCount = Applicant::query()->where('created_at', '>=', now()->subDays(30))->count();
+        // recent_count uses the same period filter, or 30 days if all time selected
+        $recentDays  = $days > 0 ? min($days, 30) : 30;
+        $recentCount = Applicant::query()->where('created_at', '>=', now()->subDays($recentDays))->count();
 
         $byStatus = $query()
             ->select('status', DB::raw('count(*) as total'))
@@ -32,14 +34,15 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // Monthly trend — last 12 full months
+        // Monthly trend — last 12 months or based on period filter
+        $trendMonths = $days > 0 ? max(1, (int) ceil($days / 30)) : 12;
         $monthlyTrend = Applicant::query()
             ->select(
                 DB::raw('YEAR(created_at) as yr'),
                 DB::raw('MONTH(created_at) as mo'),
                 DB::raw('count(*) as total')
             )
-            ->where('created_at', '>=', now()->subMonths(12)->startOfMonth())
+            ->where('created_at', '>=', now()->subMonths($trendMonths)->startOfMonth())
             ->groupBy('yr', 'mo')
             ->orderBy('yr')
             ->orderBy('mo')

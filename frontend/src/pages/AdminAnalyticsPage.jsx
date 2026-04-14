@@ -345,6 +345,12 @@ function AdminAnalyticsPage() {
     return data.map(d => ({ ...d, total: grandTotal }))
   }, [dashboard?.by_status])
 
+  // Total for donut chart center label (sum of all statuses in the chart)
+  const donutTotal = useMemo(() =>
+    pipelineDonutData.reduce((sum, d) => sum + d.value, 0),
+    [pipelineDonutData]
+  )
+
   // Trend data
   const trendData = useMemo(() => {
     if (!dashboard?.monthly_trend) return []
@@ -493,7 +499,7 @@ function AdminAnalyticsPage() {
               <div className="chart-card-body donut-body">
                 <DonutChart
                   data={pipelineDonutData}
-                  total={inPipeline}
+                  total={donutTotal}
                   loading={loading}
                 />
                 {!loading && pipelineDonutData.length > 0 && (
