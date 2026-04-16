@@ -109,6 +109,8 @@ function AdminApplicantsPage() {
   const [perPage, setPerPage]             = useState(() => parseInt(getParam('per_page', '20'), 10) || 20)
   const [deleteTarget, setDeleteTarget]   = useState(null)   // { id, name }
   const [deleting, setDeleting]           = useState(false)
+  const [restoreTarget, setRestoreTarget] = useState(null)   // { id, name }
+  const [restoring, setRestoring]         = useState(false)
   const [forceTarget, setForceTarget]     = useState(null)   // { id, name }
   const [forcing, setForcing]             = useState(false)
   const [selectedIds, setSelectedIds]     = useState([])
@@ -138,7 +140,7 @@ function AdminApplicantsPage() {
   const [experienceMax, setExperienceMax]     = useState(() => getParam('experience_max', ''))
   const [ageRangeFilter, setAgeRangeFilter]   = useState(() => getParam('age_range', ''))
 
-  const anyConfirmModalOpen = !!deleteTarget || !!forceTarget || showBulkModal || showBulkRestoreModal || showBulkForceModal
+  const anyConfirmModalOpen = !!deleteTarget || !!restoreTarget || !!forceTarget || showBulkModal || showBulkRestoreModal || showBulkForceModal
   const [viewApplicant, setViewApplicant] = useState(null)
   const [viewNotes, setViewNotes]         = useState([])
   const [viewLoading, setViewLoading]     = useState(false)
@@ -236,6 +238,7 @@ function AdminApplicantsPage() {
     const onKeyDown = (event) => {
       if (event.key !== 'Escape') return
       if (!deleting) setDeleteTarget(null)
+      if (!restoring) setRestoreTarget(null)
       if (!forcing) setForceTarget(null)
       if (!bulkDeleting) setShowBulkModal(false)
       if (!bulkRestoring) setShowBulkRestoreModal(false)
@@ -243,7 +246,7 @@ function AdminApplicantsPage() {
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [anyConfirmModalOpen, deleting, forcing, bulkDeleting, bulkRestoring, bulkForcing])
+  }, [anyConfirmModalOpen, deleting, restoring, forcing, bulkDeleting, bulkRestoring, bulkForcing])
 
   const toggleDropdown = (e, applicantId) => {
     e.stopPropagation()
@@ -404,18 +407,27 @@ function AdminApplicantsPage() {
     }
   }
 
-  const handleRestore = async (applicantId, e) => {
+  const handleRestore = (applicant, e) => {
     e.stopPropagation()
+    setRestoreTarget({ id: applicant.id, name: `${toName(applicant.first_name)} ${toName(applicant.last_name)}` })
+  }
+
+  const confirmRestore = async () => {
+    if (!restoreTarget) return
+    setRestoring(true)
     try {
-      const res = await fetch(`${apiBase}/api/applicants/${applicantId}/restore`, {
+      const res = await fetch(`${apiBase}/api/applicants/${restoreTarget.id}/restore`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error()
-      setApplicants((prev) => prev.filter((a) => a.id !== applicantId))
-      setSelectedIds((prev) => prev.filter((id) => id !== applicantId))
+      setApplicants((prev) => prev.filter((a) => a.id !== restoreTarget.id))
+      setSelectedIds((prev) => prev.filter((id) => id !== restoreTarget.id))
+      setRestoreTarget(null)
     } catch {
       setError('Failed to restore applicant.')
+    } finally {
+      setRestoring(false)
     }
   }
 
@@ -1051,7 +1063,7 @@ function AdminApplicantsPage() {
                               <button
                                 type="button"
                                 className="tbl-view-btn"
-                                onClick={(e) => handleRestore(applicant.id, e)}
+                                onClick={(e) => handleRestore(applicant, e)}
                                 title="Restore applicant"
                                 aria-label="Restore applicant"
                               >
@@ -1419,6 +1431,47 @@ function AdminApplicantsPage() {
                   <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Archiving…</>
                 ) : (
                   <>Archive applicant</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+      {restoreTarget && createPortal((
+        <div className="del-modal-backdrop" onMouseDown={() => !restoring && setRestoreTarget(null)}>
+          <div
+            className="del-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Restore applicant confirmation"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="del-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h3 className="del-modal-title">Restore applicant?</h3>
+            <p className="del-modal-body">
+              <strong>{restoreTarget.name}</strong> will be returned to the active applicant list.
+            </p>
+            <div className="del-modal-actions">
+              <button
+                type="button"
+                className="del-modal-cancel"
+                onClick={() => setRestoreTarget(null)}
+                disabled={restoring}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="del-modal-confirm"
+                onClick={confirmRestore}
+                disabled={restoring}
+              >
+                {restoring ? (
+                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Restoring…</>
+                ) : (
+                  <>Restore applicant</>
                 )}
               </button>
             </div>

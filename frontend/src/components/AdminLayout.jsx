@@ -17,10 +17,10 @@ export default function AdminLayout({ children, pageTitle }) {
   const [notifError, setNotifError] = useState(null)
   const [notifPayload, setNotifPayload] = useState({ unread_count: 0, unread: [], recent: [] })
 
-  // Detect mobile for nav rendering
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 600)
+  // Detect mobile/tablet for nav rendering
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900)
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 600)
+    const handleResize = () => setIsMobile(window.innerWidth <= 900)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])

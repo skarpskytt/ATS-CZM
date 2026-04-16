@@ -160,6 +160,7 @@ function ApplyPage() {
   const [dragOver, setDragOver] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const formRef = useRef(null)
+  const feedbackRef = useRef(null)
 
   const totalSteps = formSteps.length
   const progressPercent = Math.round((currentStep / totalSteps) * 100)
@@ -352,14 +353,18 @@ function ApplyPage() {
   }, [message])
 
   useEffect(() => {
+    if (!submitted) return
+    if (!message) return
+    requestAnimationFrame(() => {
+      feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [submitted, message])
+
+  useEffect(() => {
     if (!error) return
     const timer = setTimeout(() => setError(null), 5000)
     return () => clearTimeout(timer)
   }, [error])
-
-  useEffect(() => {
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [currentStep, submitted])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -819,7 +824,7 @@ function ApplyPage() {
                 <label className="label">
                   <span className="label-text">Contact number *</span>
                 </label>
-                <input type="tel" inputMode="tel" className="input input-bordered input-lg w-full bg-white transition-all duration-200 ease-out hover:-translate-y-0.5 focus:-translate-y-0.5 focus:shadow-lg" name="contact_number" value={form.contact_number} onChange={handleChange} placeholder="e.g., 09171234567" required />
+                <input type="tel" inputMode="tel" className="input input-bordered input-lg w-full bg-white transition-all duration-200 ease-out hover:-translate-y-0.5 focus:-translate-y-0.5 focus:shadow-lg" name="contact_number" value={form.contact_number} onChange={handleChange} placeholder="e.g., 09********" required />
               </div>
               <div className="form-control">
                 <label className="label">
@@ -947,28 +952,46 @@ function ApplyPage() {
                 <div className="terms-agreement-card">
                   <div className="terms-agreement-points">
                     <div className="terms-agreement-point">
-                      <span className="terms-point-icon">📋</span>
+                      <span className="terms-point-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 11l3 3L22 4" />
+                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                        </svg>
+                      </span>
                       <div>
                         <strong>Accuracy</strong>
                         <p>All information you provide is accurate and complete.</p>
                       </div>
                     </div>
                     <div className="terms-agreement-point">
-                      <span className="terms-point-icon">📞</span>
+                      <span className="terms-point-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.12.86.3 1.7.54 2.5a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.58-1.06a2 2 0 0 1 2.11-.45c.8.24 1.64.42 2.5.54A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                      </span>
                       <div>
                         <strong>Contact consent</strong>
                         <p>We may reach you by email or phone about your application.</p>
                       </div>
                     </div>
                     <div className="terms-agreement-point">
-                      <span className="terms-point-icon">🔒</span>
+                      <span className="terms-point-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                      </span>
                       <div>
                         <strong>Privacy</strong>
                         <p>Your data is kept confidential and used only for recruitment.</p>
                       </div>
                     </div>
                     <div className="terms-agreement-point">
-                      <span className="terms-point-icon">📁</span>
+                      <span className="terms-point-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 7a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
+                        </svg>
+                      </span>
                       <div>
                         <strong>Retention</strong>
                         <p>Your application may be kept for up to 2 years for future openings.</p>
@@ -1041,7 +1064,7 @@ function ApplyPage() {
                 )}
               </div>
 
-              <div className="apply-form-feedback">
+              <div className="apply-form-feedback" ref={feedbackRef}>
               {message ? (
                 <div className="alert alert-success apply-form-alert apply-form-alert-with-icon" role="alert">
                   <span className="apply-alert-icon" aria-hidden>✓</span>
@@ -1083,42 +1106,74 @@ function ApplyPage() {
 
               <div className="terms-modal-sections">
                 <div className="terms-modal-section">
-                  <span className="terms-modal-icon">📋</span>
+                  <span className="terms-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 11l3 3L22 4" />
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
+                  </span>
                   <div>
                     <strong>Accuracy of Information</strong>
                     <p>All information you provide is accurate, truthful, and complete. False or misleading information may result in disqualification or termination of employment.</p>
                   </div>
                 </div>
                 <div className="terms-modal-section">
-                  <span className="terms-modal-icon">📞</span>
+                  <span className="terms-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.12.86.3 1.7.54 2.5a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.58-1.06a2 2 0 0 1 2.11-.45c.8.24 1.64.42 2.5.54A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                  </span>
                   <div>
                     <strong>Consent to Contact</strong>
                     <p>You consent to being contacted via the email and phone number provided for application updates, interview schedules, and job offer correspondence.</p>
                   </div>
                 </div>
                 <div className="terms-modal-section">
-                  <span className="terms-modal-icon">🔒</span>
+                  <span className="terms-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </span>
                   <div>
                     <strong>Data Privacy &amp; Confidentiality</strong>
                     <p>Your data is used solely for recruitment, accessible only to authorized HR personnel, stored securely, and never sold or shared with unrelated third parties.</p>
                   </div>
                 </div>
                 <div className="terms-modal-section">
-                  <span className="terms-modal-icon">📁</span>
+                  <span className="terms-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 7a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
+                    </svg>
+                  </span>
                   <div>
                     <strong>Document Retention</strong>
                     <p>Your application and CV may be retained for up to 2 years from submission to consider you for future openings. After this period, data is securely deleted.</p>
                   </div>
                 </div>
                 <div className="terms-modal-section">
-                  <span className="terms-modal-icon">⚖️</span>
+                  <span className="terms-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3v18" />
+                      <path d="M5 7h14" />
+                      <path d="M7 7l-3 6h6l-3-6z" />
+                      <path d="M17 7l-3 6h6l-3-6z" />
+                    </svg>
+                  </span>
                   <div>
                     <strong>Your Rights</strong>
                     <p>You may request access, correction, or deletion of your data, and may withdraw your application at any time before a final hiring decision.</p>
                   </div>
                 </div>
                 <div className="terms-modal-section">
-                  <span className="terms-modal-icon">📄</span>
+                  <span className="terms-modal-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <path d="M14 2v6h6"/>
+                      <path d="M16 13H8"/>
+                      <path d="M16 17H8"/>
+                    </svg>
+                  </span>
                   <div>
                     <strong>Uploaded Documents</strong>
                     <p>Attached files (CV, certificates) are stored securely and reviewed only by authorized HR staff involved in the hiring process.</p>

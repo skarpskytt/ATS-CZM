@@ -612,7 +612,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  margin-left: 1.5rem;
+  margin-left: 0;
   z-index: 30;
 }
 .admin-burger span {
@@ -1643,9 +1643,18 @@ html, body {
 }
 
 .terms-point-icon {
-  font-size: 1.25rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f3d2e;
+  background: rgba(15, 61, 46, 0.08);
+  border: 1px solid rgba(15, 61, 46, 0.14);
+  box-shadow: 0 8px 18px rgba(15, 61, 46, 0.08);
   flex-shrink: 0;
-  margin-top: 0.1rem;
+  margin-top: 0.05rem;
   line-height: 1;
 }
 
@@ -1684,11 +1693,20 @@ html, body {
 }
 
 .terms-check-box {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   accent-color: #0f3d2e;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.terms-check-row span {
+  line-height: 1.45;
+  color: #111827;
+}
+
+.terms-check-row .terms-link {
+  text-decoration-thickness: 2px;
 }
 
 .terms-link {
@@ -1829,9 +1847,18 @@ html, body {
 }
 
 .terms-modal-icon {
-  font-size: 1.25rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f3d2e;
+  background: rgba(15, 61, 46, 0.08);
+  border: 1px solid rgba(15, 61, 46, 0.14);
+  box-shadow: 0 8px 18px rgba(15, 61, 46, 0.08);
   flex-shrink: 0;
-  line-height: 1.4;
+  line-height: 1;
 }
 
 .terms-modal-section strong {
@@ -2276,6 +2303,7 @@ textarea {
   background: rgba(10, 32, 22, 0.97);
   border-bottom: 1px solid rgba(200, 164, 65, 0.2);
   backdrop-filter: blur(14px);
+  padding-top: env(safe-area-inset-top);
 }
 
 .admin-topbar-inner {
@@ -2286,7 +2314,8 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .admin-brand {
@@ -2294,6 +2323,11 @@ textarea {
   flex-direction: row;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.admin-brand > div {
+  min-width: 0;
 }
 
 .admin-brand-name {
@@ -2301,6 +2335,14 @@ textarea {
   font-weight: 700;
   color: #f7f3ea;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Helps scrollIntoView land below sticky header */
+.admin-detail {
+  scroll-margin-top: 92px;
 }
 
 .admin-content {
@@ -7992,6 +8034,15 @@ textarea {
 
   .admin-brand-logo { width: 28px !important; height: 28px !important; border-radius: 8px !important; }
   .admin-brand-name { font-size: 0.85rem; }
+
+  /* Compact header actions */
+  .admin-profile-trigger {
+    padding: 6px;
+    gap: 0;
+  }
+  .admin-profile-chevron {
+    display: none;
+  }
 
   .admin-card { padding: 1rem; border-radius: 14px; }
   .admin-kpi-card { padding: 0.85rem 1rem; }

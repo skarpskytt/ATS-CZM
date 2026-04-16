@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { NavLink, useSearchParams } from 'react-router-dom'
 import { useAuth, useRole } from '../context/AuthContext'
@@ -63,11 +63,14 @@ function AdminPage() {
 
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting]         = useState(false)
+  const [restoreTarget, setRestoreTarget] = useState(null)
+  const [restoring, setRestoring]         = useState(false)
   const [forceTarget, setForceTarget]   = useState(null)
   const [forcing, setForcing]           = useState(false)
   const [statusSaving, setStatusSaving] = useState(false)
+  const detailRef = useRef(null)
 
-  const anyConfirmModalOpen = !!deleteTarget || !!forceTarget
+  const anyConfirmModalOpen = !!deleteTarget || !!restoreTarget || !!forceTarget
 
   useEffect(() => {
     if (!anyConfirmModalOpen) return
@@ -83,11 +86,12 @@ function AdminPage() {
     const onKeyDown = (event) => {
       if (event.key !== 'Escape') return
       if (!deleting) setDeleteTarget(null)
+      if (!restoring) setRestoreTarget(null)
       if (!forcing) setForceTarget(null)
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [anyConfirmModalOpen, deleting, forcing])
+  }, [anyConfirmModalOpen, deleting, restoring, forcing])
 
   const loadApplicants = async (activeToken, filters = {}, preferredId = null) => {
     setLoadingApplicants(true)
@@ -155,26 +159,15 @@ function AdminPage() {
       return
     }
 
-    const urlApplicantId = searchParams.get('applicant') ? Number(searchParams.get('applicant')) : null
-    loadApplicants(token, {
-      per_page: 10,
-      archived: viewMode === 'archived' ? 'only' : undefined,
-    }, viewMode === 'active' ? urlApplicantId : null)
-  }, [token, searchParams, viewMode])
-
-  useEffect(() => {
-    if (!token) {
-      return
-    }
-
     const timer = setTimeout(() => {
+      const urlApplicantId = searchParams.get('applicant') ? Number(searchParams.get('applicant')) : null
       loadApplicants(token, {
         search: getParam('search') || undefined,
         status: getParam('status') || undefined,
         archived: viewMode === 'archived' ? 'only' : undefined,
         page: getParam('page') ? Number(getParam('page')) : 1,
         per_page: 10,
-      })
+      }, viewMode === 'active' ? urlApplicantId : null)
     }, 300)
 
     return () => clearTimeout(timer)
@@ -346,21 +339,26 @@ function AdminPage() {
     }
   }
 
-  const handleRestoreApplicant = async (applicantId) => {
+  const handleRestoreApplicant = async () => {
+    if (!restoreTarget) return
+    setRestoring(true)
     setAdminMessage(null)
     setAdminError(null)
     try {
-      const response = await fetch(`${apiBase}/api/applicants/${applicantId}/restore`, {
+      const response = await fetch(`${apiBase}/api/applicants/${restoreTarget.id}/restore`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!response.ok) throw new Error()
 
-      setApplicants((previous) => previous.filter((item) => item.id !== applicantId))
-      setSelectedId((current) => (current === applicantId ? null : current))
+      setApplicants((previous) => previous.filter((item) => item.id !== restoreTarget.id))
+      setSelectedId((current) => (current === restoreTarget.id ? null : current))
+      setRestoreTarget(null)
       setAdminMessage('Applicant restored to active list.')
     } catch (_) {
       setAdminError('Failed to restore applicant.')
+    } finally {
+      setRestoring(false)
     }
   }
 
@@ -666,7 +664,21 @@ function AdminPage() {
     win.document.close()
   }
 
-  const selectedApplicant = applicants.find((item) => item.id === selectedId)
+  const selectedApplicant = useMemo(
+    () => applicants.find((item) => item.id === selectedId),
+    [applicants, selectedId]
+  )
+
+  useEffect(() => {
+    if (viewMode !== 'active') return
+    if (!selectedApplicant) return
+    // Auto-scroll to details only when applicant is in the "Reviewed" stage.
+    if (selectedApplicant.status !== 'reviewed') return
+    // Smoothly bring details into view (desktop + mobile).
+    requestAnimationFrame(() => {
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [selectedApplicant, viewMode])
 
   const getGreeting = () => {
     const h = new Date().getHours()
@@ -833,7 +845,14 @@ function AdminPage() {
                   type="button"
                   className="btn btn-sm btn-ghost"
                   disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
+                  onClick={() => {
+                    const current = getParam('page') ? Number(getParam('page')) : page
+                    const next = Math.max(1, current - 1)
+                    const newParams = new URLSearchParams(searchParams)
+                    if (next === 1) newParams.delete('page')
+                    else newParams.set('page', String(next))
+                    setSearchParams(newParams, { replace: true })
+                  }}
                 >
                   ‹
                 </button>
@@ -842,13 +861,20 @@ function AdminPage() {
                   type="button"
                   className="btn btn-sm btn-ghost"
                   disabled={page >= lastPage}
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={() => {
+                    const current = getParam('page') ? Number(getParam('page')) : page
+                    const next = Math.min(lastPage, current + 1)
+                    const newParams = new URLSearchParams(searchParams)
+                    if (next === 1) newParams.delete('page')
+                    else newParams.set('page', String(next))
+                    setSearchParams(newParams, { replace: true })
+                  }}
                 >
                   ›
                 </button>
               </div>
           </aside>
-          <section className="admin-panel admin-detail">
+          <section className="admin-panel admin-detail" ref={detailRef}>
             {selectedApplicant ? (
               <div>
                 <div className="admin-detail-head">
@@ -928,7 +954,7 @@ function AdminPage() {
                             <button
                               type="button"
                               className="btn btn-sm btn-outline"
-                              onClick={() => handleRestoreApplicant(selectedApplicant.id)}
+                              onClick={() => setRestoreTarget({ id: selectedApplicant.id, name: `${toName(selectedApplicant.first_name)} ${toName(selectedApplicant.last_name)}` })}
                             >
                               Restore Applicant
                             </button>
@@ -1194,6 +1220,47 @@ function AdminPage() {
                   <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Archiving…</>
                 ) : (
                   <>Archive applicant</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+      {restoreTarget && createPortal((
+        <div className="del-modal-backdrop" onMouseDown={() => !restoring && setRestoreTarget(null)}>
+          <div
+            className="del-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Restore applicant confirmation"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="del-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h3 className="del-modal-title">Restore applicant?</h3>
+            <p className="del-modal-body">
+              <strong>{restoreTarget.name}</strong> will be returned to the active applicant list.
+            </p>
+            <div className="del-modal-actions">
+              <button
+                type="button"
+                className="del-modal-cancel"
+                onClick={() => setRestoreTarget(null)}
+                disabled={restoring}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="del-modal-confirm"
+                onClick={handleRestoreApplicant}
+                disabled={restoring}
+              >
+                {restoring ? (
+                  <><span className="login-spinner" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />Restoring…</>
+                ) : (
+                  <>Restore applicant</>
                 )}
               </button>
             </div>

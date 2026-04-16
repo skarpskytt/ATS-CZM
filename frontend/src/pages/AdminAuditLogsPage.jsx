@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import AdminLayout from '../components/AdminLayout'
 import { apiBase } from '../utils/apiBase'
@@ -71,7 +71,6 @@ const PER_PAGE_OPTIONS = [20, 30, 50, 100]
 
 export default function AdminAuditLogsPage() {
   const { token } = useAuth()
-  const tableRef = useRef(null)
 
   const [logs, setLogs]       = useState([])
   const [meta, setMeta]       = useState({ current_page: 1, last_page: 1, total: 0 })
@@ -101,7 +100,6 @@ export default function AdminAuditLogsPage() {
 
   useEffect(() => {
     load(applied, page, perPage)
-    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [load, applied, page, perPage])
 
   function handleFilter(e) {
@@ -183,7 +181,7 @@ export default function AdminAuditLogsPage() {
       </div>
 
       {/* ── Main card ── */}
-      <div className="admin-card" ref={tableRef}>
+      <div className="admin-card">
 
         {/* Card header */}
         <div className="admin-card-head">
