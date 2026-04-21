@@ -322,7 +322,5 @@ ATS/
 - [x] Rate limiting and security hardening
 - [x] Modal auto-scroll with smooth centering
 - [x] LAN/Network access support with CORS configuration
-- [ ] Excel / CSV export
-- [ ] Interview scheduling integration
+- [x] Excel / CSV export
 - [ ] HTTPS / SSL deployment
-- [ ] Docker setup
